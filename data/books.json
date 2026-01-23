@@ -1,0 +1,76 @@
+{
+  "books": [
+    {
+      "id": "atomic-habits",
+      "title": "Atomic Habits",
+      "author": "James Clear",
+      "category": "habits",
+      "angles": [
+        "the-2-minute-rule",
+        "habit-stacking",
+        "1-percent-better",
+        "environment-design",
+        "identity-based-habits"
+      ],
+      "coverage": []
+    },
+    {
+      "id": "deep-work",
+      "title": "Deep Work",
+      "author": "Cal Newport",
+      "category": "productivity",
+      "angles": [
+        "shallow-vs-deep",
+        "attention-residue",
+        "rhythmic-philosophy",
+        "grand-gestures",
+        "embrace-boredom"
+      ],
+      "coverage": []
+    },
+    {
+      "id": "thinking-fast-and-slow",
+      "title": "Thinking, Fast and Slow",
+      "author": "Daniel Kahneman",
+      "category": "psychology",
+      "angles": [
+        "system-1-vs-system-2",
+        "cognitive-biases",
+        "anchoring-effect",
+        "loss-aversion",
+        "peak-end-rule"
+      ],
+      "coverage": []
+    },
+    {
+      "id": "the-psychology-of-money",
+      "title": "The Psychology of Money",
+      "author": "Morgan Housel",
+      "category": "finance",
+      "angles": [
+        "wealth-vs-rich",
+        "compounding",
+        "room-for-error",
+        "man-in-the-car-paradox",
+        "saving-without-reason"
+      ],
+      "coverage": []
+    },
+    {
+      "id": "cant-hurt-me",
+      "title": "Can't Hurt Me",
+      "author": "David Goggins",
+      "category": "mindset",
+      "angles": [
+        "40-percent-rule",
+        "accountability-mirror",
+        "callousing-your-mind",
+        "taking-souls",
+        "cookie-jar-method"
+      ],
+      "coverage": []
+    }
+  ],
+  "categories": ["habits", "productivity", "psychology", "finance", "mindset"],
+  "last_updated": "2026-01-23"
+}
