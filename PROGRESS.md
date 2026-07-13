@@ -33,7 +33,7 @@ Do NOT one-shot — pause after each for me to test.
 | 5 | `images` — scene → generate_image() → `images/scene_XXX.png` (mock done; real provider pending) | 🟡 mock |
 | 6 | `assemble` — measure audio, still + Ken Burns (or clip), music, → `output/final.mp4` (1920×1080) | ✅ |
 | 7 | Higgsfield drop-in — flag `animate=true`, generate clip via MCP, drop into `clips/`, re-run assemble | ⬜ |
-| 8 | Gradio UI — thin wrapper over pipeline functions | ⬜ |
+| 8 | Gradio UI — thin wrapper over pipeline functions | ✅ |
 
 ## Stages (detail)
 - **0. convert** — uploaded PDF/epub/docx → markitdown → `input/book.md`
