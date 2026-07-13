@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from .config import load_config, resolve_path
-from .llm import call_llm
+from .llm import call_stage
 
 _SYSTEM = (
     "You are a careful editor. You read a book and distill its essential "
@@ -82,14 +82,13 @@ def ingest(*, force: bool = False, cfg: dict[str, Any] | None = None) -> Path:
             f"~{len(book_text):,} chars across the whole book."
         )
 
-    model = cfg["llm"]["models"]["ingest"]
-    print(f"[ingest] extracting outline with {model} ...")
-    data = call_llm(
-        model,
+    print("[ingest] extracting outline ...")
+    data = call_stage(
+        cfg,
+        "ingest",
         _build_prompt(book_text, ing["min_ideas"], ing["max_ideas"]),
         system=_SYSTEM,
         json_out=True,
-        cfg=cfg,
     )
 
     outline = _validate(data, ing["min_ideas"], ing["max_ideas"])
