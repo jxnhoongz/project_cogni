@@ -24,6 +24,9 @@ llm:
     review:
       provider: "claude"                      # validator: gate visuals before spending image/clip credits
       model: "claude-sonnet-5"                # bump to claude-opus-4-8 for a stricter pass
+    script_review:
+      provider: "claude"                      # critic: flag weak narration (hook, filler, vague, summary-not-verdict)
+      model: "claude-sonnet-5"                # revise reuses the stronger `script` model
 
 # --- Ingest (book.md -> outline.json) ----------------------------------------
 ingest:

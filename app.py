@@ -21,6 +21,7 @@ from cogni.ingest import ingest
 from cogni.narrate import narrate
 from cogni.review import review
 from cogni.script import script
+from cogni.script_review import revise_narration, script_review
 from cogni.visuals import visuals
 
 VOICES = [
@@ -51,6 +52,7 @@ def _refresh():
         store.final_video_path(),
         store.visuals_table(),
         store.review_status_md(),
+        store.narration_review_md(),
     )
 
 
@@ -84,6 +86,31 @@ def do_save_edits(df):
     except Exception as e:
         return f"❌ {e}", store.preview_html()
     return f"✅ Saved edits for {n} scenes. Re-run narration to update the audio.", store.preview_html()
+
+
+def do_script_review():
+    try:
+        summary = script_review()
+    except Exception as e:
+        return f"❌ {e}", store.narration_review_md(), store.preview_html()
+    if summary["flagged"]:
+        msg = (f"⚠️ {summary['n_ok']}/{summary['n_scenes']} strong — flagged "
+               f"{summary['flagged']}. Revise them (or edit), then re-review.")
+    else:
+        msg = f"✅ All {summary['n_scenes']} scenes read strong."
+    return msg, store.narration_review_md(), store.preview_html()
+
+
+def do_revise_narration():
+    try:
+        changed = revise_narration()
+    except Exception as e:
+        return store.scenes_table(), f"❌ {e}", store.narration_review_md(), store.preview_html()
+    if not changed:
+        msg = "Nothing flagged — run **Review narration** first."
+    else:
+        msg = f"✅ Rewrote scenes {changed}. Re-run review, then re-narrate those scenes."
+    return store.scenes_table(), msg, store.narration_review_md(), store.preview_html()
 
 
 def do_animate_all(flag):
@@ -222,6 +249,13 @@ with gr.Blocks(title="Project Cogni") as demo:
             anim_all_btn = gr.Button("Animate all scenes")
             anim_none_btn = gr.Button("Clear animate")
         save_status = gr.Markdown()
+        gr.Markdown("### Narration review")
+        gr.Markdown("Have the editor flag weak scenes (soft hook, filler, vague, "
+                    "summary-not-verdict) — free — then rewrite just those.")
+        with gr.Row():
+            sreview_btn = gr.Button("Review narration (free)", variant="primary")
+            revise_btn = gr.Button("Revise flagged scenes")
+        nreview_md = gr.Markdown(store.narration_review_md())
 
     with gr.Tab("3. Visuals + Review"):
         gr.Markdown(
@@ -275,12 +309,15 @@ with gr.Blocks(title="Project Cogni") as demo:
         vid_status = gr.Markdown()
         video = gr.Video(label="final.mp4")
 
-    refresh_outputs = [grid, scene_pick, audio_md, gallery, prev_html, prev_video, vis_grid, review_md]
+    refresh_outputs = [grid, scene_pick, audio_md, gallery, prev_html, prev_video,
+                       vis_grid, review_md, nreview_md]
     book_dd.change(switch_project, inputs=book_dd, outputs=refresh_outputs)
     gen_btn.click(do_generate_script, inputs=book, outputs=[book_dd, gen_status, *refresh_outputs])
     save_btn.click(do_save_edits, inputs=grid, outputs=[save_status, prev_html])
     anim_all_btn.click(lambda: do_animate_all(True), inputs=None, outputs=[grid, save_status, prev_html])
     anim_none_btn.click(lambda: do_animate_all(False), inputs=None, outputs=[grid, save_status, prev_html])
+    sreview_btn.click(do_script_review, inputs=None, outputs=[save_status, nreview_md, prev_html])
+    revise_btn.click(do_revise_narration, inputs=None, outputs=[grid, save_status, nreview_md, prev_html])
     vis_btn.click(do_generate_visuals, inputs=None, outputs=[vis_grid, vis_status, review_md, prev_html])
     vis_save_btn.click(do_save_visual_edits, inputs=vis_grid, outputs=[vis_status, review_md, prev_html])
     review_btn.click(do_run_review, inputs=None, outputs=[vis_status, review_md, prev_html])

@@ -32,6 +32,7 @@ from cogni.llm import call_stage
 from cogni.narrate import narrate
 from cogni.review import review
 from cogni.script import script
+from cogni.script_review import revise_narration, script_review
 from cogni.visuals import visuals
 
 
@@ -49,6 +50,17 @@ def cmd_projects(_args: argparse.Namespace) -> int:
     for slug in projects:
         print(f"  {'* ' if slug == active else '  '}{slug}")
     print("\n(* = active)")
+    return 0
+
+
+def cmd_script_review(_args: argparse.Namespace) -> int:
+    summary = script_review()
+    return 0 if not summary["flagged"] else 1
+
+
+def cmd_revise(args: argparse.Namespace) -> int:
+    ids = [int(x) for x in args.scenes.split(",")] if args.scenes else None
+    revise_narration(ids)
     return 0
 
 
@@ -197,6 +209,21 @@ def build_parser() -> argparse.ArgumentParser:
         help="Override the narration point of view (default: config.yaml script.angle)",
     )
     p_script.set_defaults(func=cmd_script)
+
+    p_sreview = sub.add_parser(
+        "script-review",
+        help="Critique the narration and flag weak scenes (text-only, no credits)",
+    )
+    p_sreview.set_defaults(func=cmd_script_review)
+
+    p_revise = sub.add_parser(
+        "revise", help="Rewrite flagged scenes' narration to fix the review notes"
+    )
+    p_revise.add_argument(
+        "--scenes", default=None,
+        help="Comma-separated scene ids to revise (default: all flagged by script-review)",
+    )
+    p_revise.set_defaults(func=cmd_revise)
 
     p_visuals = sub.add_parser(
         "visuals",
