@@ -36,8 +36,17 @@ ingest:
 
 # --- Script (outline.json -> scenes.json) ------------------------------------
 script:
-  min_scenes: 8
+  # "short" = one pass, min/max_scenes below (~4-5 min, fast/cheap — good for tests).
+  # "long"  = chaptered deep-dive (the `long:` block below), ~30-45 min for production.
+  mode: "short"
+  min_scenes: 8              # short mode: scene count range
   max_scenes: 14
+  long:                      # long mode: a structure pass, then one call per chapter
+    target_minutes: 37       # aim (~30-45 min); guidance to the model
+    min_chapters: 5
+    max_chapters: 7
+    min_scenes_per_chapter: 10
+    max_scenes_per_chapter: 14
   # The narration point of view. This is a VERDICT, not a summary — a stance.
   # Override per book with `--angle "..."`.
   angle: >-

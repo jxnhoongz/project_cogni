@@ -78,7 +78,8 @@ def do_generate_script(file):
         convert(file, force=True)
         yield (gr.update(), "⏳ **2/3** Ingesting the key ideas…", *_hold_refresh())
         ingest(force=True)
-        yield (gr.update(), "⏳ **3/3** Writing the verdict script — the long step…", *_hold_refresh())
+        yield (gr.update(), "⏳ **3/3** Writing the verdict script — the long step "
+               "(long-form mode writes chapter by chapter; several minutes)…", *_hold_refresh())
         script(force=True)
     except Exception as e:
         yield (gr.update(), f"❌ {e}", *_refresh())
