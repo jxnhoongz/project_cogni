@@ -16,7 +16,13 @@ import argparse
 import sys
 
 from cogni.config import load_config, load_style_token
+from cogni.convert import convert
 from cogni.llm import call_llm
+
+
+def cmd_convert(args: argparse.Namespace) -> int:
+    convert(args.source, force=args.force)
+    return 0
 
 
 def cmd_test_llm(args: argparse.Namespace) -> int:
@@ -68,6 +74,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Request raw text instead of JSON",
     )
     p_test.set_defaults(func=cmd_test_llm)
+
+    p_convert = sub.add_parser(
+        "convert", help="Convert a book file (PDF/epub/docx) to input/book.md"
+    )
+    p_convert.add_argument("source", help="Path to the book file")
+    p_convert.add_argument(
+        "--force", action="store_true", help="Overwrite an existing book.md"
+    )
+    p_convert.set_defaults(func=cmd_convert)
 
     p_style = sub.add_parser("show-style", help="Print the current STYLE token")
     p_style.set_defaults(func=cmd_show_style)
