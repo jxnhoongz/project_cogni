@@ -108,11 +108,13 @@ def do_script_review():
         summary = script_review()
     except Exception as e:
         return f"❌ {e}", store.narration_review_md(), store.preview_html()
-    if summary["flagged"]:
-        msg = (f"⚠️ {summary['n_ok']}/{summary['n_scenes']} strong — flagged "
-               f"{summary['flagged']}. Revise them (or edit), then re-review.")
+    if not summary["checked"]:
+        msg = "Nothing new to review — every scene already judged. Revise or edit a scene to re-check it."
+    elif summary["flagged"]:
+        msg = (f"⚠️ Checked {len(summary['checked'])} — flagged {summary['flagged']}. "
+               "Revise them (auto-saves), then re-review. (Advisory — it blocks nothing.)")
     else:
-        msg = f"✅ All {summary['n_scenes']} scenes read strong."
+        msg = f"✅ Checked {len(summary['checked'])} — all read strong."
     return msg, store.narration_review_md(), store.preview_html()
 
 
@@ -121,11 +123,13 @@ def do_fact_review():
         summary = fact_review()
     except Exception as e:
         return f"❌ {e}", store.fact_review_md(), store.preview_html()
-    if summary["flagged"]:
-        msg = (f"⚠️ {summary['n_ok']}/{summary['n_scenes']} grounded — flagged "
-               f"{summary['flagged']}. Revise them (grounds in the book), then re-check.")
+    if not summary["checked"]:
+        msg = "Nothing new to check — every scene already grounded. Revise or edit a scene to re-check it."
+    elif summary["flagged"]:
+        msg = (f"⚠️ Checked {len(summary['checked'])} — flagged {summary['flagged']}. "
+               "Revise them (grounds in the book, auto-saves), then re-check.")
     else:
-        msg = f"✅ All {summary['n_scenes']} scenes are grounded in the book."
+        msg = f"✅ Checked {len(summary['checked'])} — all grounded in the book."
     return msg, store.fact_review_md(), store.preview_html()
 
 
@@ -138,7 +142,8 @@ def do_revise_narration():
     if not changed:
         msg = "Nothing flagged — run **Review narration** or **Fact-check** first."
     else:
-        msg = f"✅ Rewrote scenes {changed}. Re-run the checks, then re-narrate those scenes."
+        msg = (f"✅ Rewrote scenes {changed} — **saved automatically, no Save needed.** "
+               "Re-run the checks (only these re-check), then re-narrate them.")
     return (store.scenes_table(), msg, store.narration_review_md(),
             store.fact_review_md(), store.preview_html())
 

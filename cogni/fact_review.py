@@ -108,10 +108,13 @@ def _validate(data: dict[str, Any], ids: set[int]) -> dict[int, dict[str, Any]]:
     return out
 
 
-def fact_review(*, cfg: dict[str, Any] | None = None) -> dict[str, Any]:
-    """Check every scene's narration against book.md; write fact_review to scenes.json.
+def fact_review(*, force: bool = False, cfg: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Check narration against book.md; write fact_review back into scenes.json.
 
-    Returns {"n_ok": int, "n_scenes": int, "flagged": [ids]}.
+    Converges like script-review: only scenes not yet fact-checked (fact_review is
+    None) are (re)checked; already-cleared scenes keep their verdict. force=True
+    rechecks all. The model always sees the full script for context.
+    Returns {"n_ok", "n_scenes", "flagged", "checked"}.
     """
     cfg = cfg or load_config()
     scenes_path = resolve_path(cfg, "scenes")
@@ -122,35 +125,40 @@ def fact_review(*, cfg: dict[str, Any] | None = None) -> dict[str, Any]:
     if not scenes:
         raise RuntimeError(f"{scenes_path} has no scenes.")
 
-    book = load_book_excerpt(cfg)
-    print(f"[fact-check] grounding {len(scenes)} scenes against the book (no credits) ...")
-    data = call_stage(
-        cfg, "fact_review", _build_prompt(book, scenes), system=_SYSTEM, json_out=True
-    )
-    by_id = _validate(data, {int(s["id"]) for s in scenes})
+    targets = scenes if force else [
+        s for s in scenes if not isinstance(s.get("fact_review"), dict)
+    ]
+    checked = [s["id"] for s in targets]
+    if targets:
+        book = load_book_excerpt(cfg)
+        print(f"[fact-check] grounding {len(targets)} scene(s) {checked} against the book (no credits) ...")
+        data = call_stage(
+            cfg, "fact_review", _build_prompt(book, scenes), system=_SYSTEM, json_out=True
+        )
+        by_id = _validate(data, {int(s["id"]) for s in scenes})
+        for s in targets:
+            s["fact_review"] = by_id[int(s["id"])]
+        scenes_path.write_text(
+            json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
+    else:
+        print("[fact-check] nothing new to check — every scene already grounded "
+              "(revise or edit a scene to re-check it, or use force to redo all).")
 
-    flagged = []
-    for s in scenes:
-        r = by_id[int(s["id"])]
-        s["fact_review"] = r
-        if not r["ok"]:
-            flagged.append(s["id"])
-
-    scenes_path.write_text(
-        json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-    )
-    n_ok = len(scenes) - len(flagged)
+    flagged = [s["id"] for s in scenes
+               if isinstance(s.get("fact_review"), dict) and not s["fact_review"]["ok"]]
+    n_ok = sum(1 for s in scenes if isinstance(s.get("fact_review"), dict) and s["fact_review"]["ok"])
     if flagged:
-        print(f"[fact-check] {n_ok}/{len(scenes)} scenes clean. Grounding issues in {flagged}:")
+        print(f"[fact-check] {n_ok}/{len(scenes)} clean. Grounding issues in {flagged}:")
         for s in scenes:
             r = s.get("fact_review") or {}
-            if not r.get("ok"):
+            if isinstance(s.get("fact_review"), dict) and not r.get("ok"):
                 for issue in r.get("issues", []):
                     print(f"  scene {s['id']:>2}: {issue}")
         print("[fact-check] fix with `revise` (grounds the rewrite in the book) or edit by hand.")
     else:
         print(f"[fact-check] all {len(scenes)} scenes are grounded in the book.")
-    return {"n_ok": n_ok, "n_scenes": len(scenes), "flagged": flagged}
+    return {"n_ok": n_ok, "n_scenes": len(scenes), "flagged": flagged, "checked": checked}
 
 
 def fact_review_gate(scenes: list[dict[str, Any]]) -> list[int]:

@@ -54,8 +54,8 @@ def cmd_projects(_args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_script_review(_args: argparse.Namespace) -> int:
-    summary = script_review()
+def cmd_script_review(args: argparse.Namespace) -> int:
+    summary = script_review(force=args.force)
     return 0 if not summary["flagged"] else 1
 
 
@@ -65,8 +65,8 @@ def cmd_revise(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_fact_check(_args: argparse.Namespace) -> int:
-    summary = fact_review()
+def cmd_fact_check(args: argparse.Namespace) -> int:
+    summary = fact_review(force=args.force)
     return 0 if not summary["flagged"] else 1
 
 
@@ -220,6 +220,10 @@ def build_parser() -> argparse.ArgumentParser:
         "script-review",
         help="Critique the narration and flag weak scenes (text-only, no credits)",
     )
+    p_sreview.add_argument(
+        "--force", action="store_true",
+        help="Re-review every scene (default: only ones changed since last review)",
+    )
     p_sreview.set_defaults(func=cmd_script_review)
 
     p_revise = sub.add_parser(
@@ -234,6 +238,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_fact = sub.add_parser(
         "fact-check",
         help="Check narration claims against book.md and flag grounding issues (no credits)",
+    )
+    p_fact.add_argument(
+        "--force", action="store_true",
+        help="Re-check every scene (default: only ones changed since last check)",
     )
     p_fact.set_defaults(func=cmd_fact_check)
 
