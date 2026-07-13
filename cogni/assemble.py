@@ -27,6 +27,15 @@ from .config import load_config, project_root, resolve_path, resolve_shared
 _MUSIC_EXTS = (".mp3", ".wav", ".m4a", ".aac", ".ogg", ".flac")
 
 
+def _venc(cfg: dict[str, Any]) -> list[str]:
+    """ffmpeg video-encoder args — Apple hardware (videotoolbox) or software (x264)."""
+    v = cfg["video"]
+    if v.get("encoder", "videotoolbox") == "videotoolbox":
+        return ["-c:v", "h264_videotoolbox", "-b:v", str(v.get("video_bitrate", "12M")),
+                "-pix_fmt", "yuv420p"]
+    return ["-c:v", "libx264", "-preset", "medium", "-pix_fmt", "yuv420p"]
+
+
 def _run(cmd: list[str], what: str) -> None:
     proc = subprocess.run(cmd, capture_output=True, text=True)
     if proc.returncode != 0:
@@ -146,7 +155,7 @@ def _scene_clip(
         "-filter_complex", filtergraph,
         "-map", vmap, "-map", "1:a",
         "-t", f"{duration}",
-        "-c:v", "libx264", "-preset", "medium", "-pix_fmt", "yuv420p", "-r", str(fps),
+        *_venc(cfg), "-r", str(fps),
         "-c:a", "aac", "-b:a", "192k", "-ar", "44100",
         str(out),
     ]
@@ -164,13 +173,12 @@ def _find_music(cfg: dict[str, Any]) -> Path | None:
     return None
 
 
-def _concat(clips: list[Path], out: Path) -> None:
+def _concat(clips: list[Path], out: Path, cfg: dict[str, Any]) -> None:
     listfile = out.parent / "concat_list.txt"
     listfile.write_text("".join(f"file '{c}'\n" for c in clips), encoding="utf-8")
     _run(
         ["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(listfile),
-         "-c:v", "libx264", "-preset", "medium", "-pix_fmt", "yuv420p",
-         "-c:a", "aac", "-b:a", "192k", str(out)],
+         *_venc(cfg), "-c:a", "aac", "-b:a", "192k", str(out)],
         "concat",
     )
 
@@ -244,7 +252,7 @@ def assemble(*, force: bool = False, cfg: dict[str, Any] | None = None) -> Path:
             clips.append(_scene_clip(s, duration, audio, tmp, cfg))
 
         concat = tmp / "concat.mp4"
-        _concat(clips, concat)
+        _concat(clips, concat, cfg)
 
         music = _find_music(cfg)
         if music:

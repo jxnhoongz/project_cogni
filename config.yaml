@@ -64,6 +64,8 @@ video:
   fade_sec: 0.5
   subtitles: true            # burn synced subtitles from the narration (edge-tts timings)
   burn_captions: false       # the old on_screen_text label bar (off when subtitles on)
+  encoder: "videotoolbox"    # Apple Silicon hardware encoder (fast, quiet). "x264" = software.
+  video_bitrate: "12M"       # target bitrate for the videotoolbox encoder
   preview_scene_sec: 4.0     # silent placeholder length when a scene has no recording
 
 # --- Filesystem layout -------------------------------------------------------
