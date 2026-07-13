@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import sys
 
+from cogni.animate import animate_plan
 from cogni.assemble import assemble
 from cogni.audio import check_audio
 from cogni.config import (
@@ -76,6 +77,23 @@ def cmd_script(args: argparse.Namespace) -> int:
 
 def cmd_check_audio(_args: argparse.Namespace) -> int:
     return 0 if check_audio() else 1
+
+
+def cmd_animate(_args: argparse.Namespace) -> int:
+    plan = animate_plan()
+    if not plan:
+        print("No scenes flagged animate=true. Tick 'Animate' in the UI (Edit script) first.")
+        return 0
+    print(f"{len(plan)} scene(s) flagged for Higgsfield hero clips:")
+    for p in plan:
+        state = "✓ has clip" if p["has_clip"] else ("ready" if p["image"] else "NO IMAGE — run `images`")
+        print(f"  scene {p['id']:>2}: {state}")
+        if p["image"]:
+            print(f"           still: {p['image']}")
+        print(f"           clip:  {p['clip']}")
+    print("\nWith the Higgsfield MCP connected, run the `cogni-animate` skill to "
+          "generate these clips and re-assemble.")
+    return 0
 
 
 def cmd_test_llm(args: argparse.Namespace) -> int:
@@ -171,6 +189,11 @@ def build_parser() -> argparse.ArgumentParser:
         "check-audio", help="Verify every scene has a narration audio file"
     )
     p_audio.set_defaults(func=cmd_check_audio)
+
+    p_animate = sub.add_parser(
+        "animate", help="Show which scenes are flagged for Higgsfield hero clips"
+    )
+    p_animate.set_defaults(func=cmd_animate)
 
     p_images = sub.add_parser(
         "images", help="Generate a still per scene into images/scene_XXX.png"

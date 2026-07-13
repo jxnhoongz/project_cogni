@@ -17,13 +17,22 @@ from .config import load_config, project_root, resolve_path
 
 
 def _edge_tts(text: str, voice: str, out_path: Path) -> None:
+    """Write the mp3 AND a sentence-synced .srt (from edge-tts's own timings)."""
     try:
         import edge_tts
     except ImportError as e:
         raise RuntimeError("edge-tts not installed — `pip install edge-tts`.") from e
 
     async def _run() -> None:
-        await edge_tts.Communicate(text, voice).save(str(out_path))
+        comm = edge_tts.Communicate(text, voice)
+        submaker = edge_tts.SubMaker()
+        with open(out_path, "wb") as f:
+            async for chunk in comm.stream():
+                if chunk["type"] == "audio":
+                    f.write(chunk["data"])
+                else:  # SentenceBoundary / WordBoundary timing events
+                    submaker.feed(chunk)
+        out_path.with_suffix(".srt").write_text(submaker.get_srt(), encoding="utf-8")
 
     asyncio.run(_run())
 

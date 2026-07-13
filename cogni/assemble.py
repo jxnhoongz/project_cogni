@@ -13,6 +13,7 @@ pipeline is debuggable one scene at a time.
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 import tempfile
 import textwrap
@@ -24,6 +25,15 @@ from PIL import Image, ImageDraw, ImageFont
 from .config import load_config, project_root, resolve_path, resolve_shared
 
 _MUSIC_EXTS = (".mp3", ".wav", ".m4a", ".aac", ".ogg", ".flac")
+
+
+def _venc(cfg: dict[str, Any]) -> list[str]:
+    """ffmpeg video-encoder args — Apple hardware (videotoolbox) or software (x264)."""
+    v = cfg["video"]
+    if v.get("encoder", "videotoolbox") == "videotoolbox":
+        return ["-c:v", "h264_videotoolbox", "-b:v", str(v.get("video_bitrate", "12M")),
+                "-pix_fmt", "yuv420p"]
+    return ["-c:v", "libx264", "-preset", "medium", "-pix_fmt", "yuv420p"]
 
 
 def _run(cmd: list[str], what: str) -> None:
@@ -85,7 +95,19 @@ def _scene_clip(
     w, h, fps = int(v["width"]), int(v["height"]), int(v["fps"])
     out = tmp / f"scene_{scene['id']:03d}.mp4"
     frames = max(1, round(duration * fps))
-    burn = bool(v.get("burn_captions")) and bool(scene.get("on_screen_text"))
+
+    # Synced subtitles from the narration's .srt (replaces the old caption bar).
+    subs = None
+    if bool(v.get("subtitles")) and audio is not None:
+        srt_src = audio.with_suffix(".srt")
+        if srt_src.exists():
+            subs = tmp / f"sub_{scene['id']:03d}.srt"
+            shutil.copyfile(srt_src, subs)
+    burn = (
+        subs is None
+        and bool(v.get("burn_captions"))
+        and bool(scene.get("on_screen_text"))
+    )
 
     inputs: list[str] = []
     clip_path = scene.get("clip_path")
@@ -105,6 +127,12 @@ def _scene_clip(
             f"zoompan=z='min(zoom+{step:.6f},{zmax})':d={frames}:"
             f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={w}x{h}:fps={fps},format=yuv420p"
         )
+
+    if subs is not None:
+        style = ("FontName=DejaVu Sans,FontSize=15,PrimaryColour=&H00FFFFFF,"
+                 "OutlineColour=&H90000000,BorderStyle=1,Outline=2,Shadow=0,"
+                 "Alignment=2,MarginV=52")
+        vchain += f",subtitles='{subs}':force_style='{style}'"
 
     # Audio input (index 1).
     if audio is not None:
@@ -127,7 +155,7 @@ def _scene_clip(
         "-filter_complex", filtergraph,
         "-map", vmap, "-map", "1:a",
         "-t", f"{duration}",
-        "-c:v", "libx264", "-preset", "medium", "-pix_fmt", "yuv420p", "-r", str(fps),
+        *_venc(cfg), "-r", str(fps),
         "-c:a", "aac", "-b:a", "192k", "-ar", "44100",
         str(out),
     ]
@@ -145,13 +173,12 @@ def _find_music(cfg: dict[str, Any]) -> Path | None:
     return None
 
 
-def _concat(clips: list[Path], out: Path) -> None:
+def _concat(clips: list[Path], out: Path, cfg: dict[str, Any]) -> None:
     listfile = out.parent / "concat_list.txt"
     listfile.write_text("".join(f"file '{c}'\n" for c in clips), encoding="utf-8")
     _run(
         ["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(listfile),
-         "-c:v", "libx264", "-preset", "medium", "-pix_fmt", "yuv420p",
-         "-c:a", "aac", "-b:a", "192k", str(out)],
+         *_venc(cfg), "-c:a", "aac", "-b:a", "192k", str(out)],
         "concat",
     )
 
@@ -225,7 +252,7 @@ def assemble(*, force: bool = False, cfg: dict[str, Any] | None = None) -> Path:
             clips.append(_scene_clip(s, duration, audio, tmp, cfg))
 
         concat = tmp / "concat.mp4"
-        _concat(clips, concat)
+        _concat(clips, concat, cfg)
 
         music = _find_music(cfg)
         if music:
