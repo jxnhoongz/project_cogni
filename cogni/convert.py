@@ -63,7 +63,9 @@ def _ocr_pdf(src: Path, dpi: int = 300) -> str:
     except ImportError as e:
         raise RuntimeError(
             "OCR needs pymupdf + pytesseract and the tesseract binary. "
-            "Install: pip install pymupdf pytesseract && brew install tesseract."
+            "Install: pip install pymupdf pytesseract, plus the tesseract binary "
+            "(`winget install UB-Mannheim.TesseractOCR` on Windows, "
+            "`brew install tesseract` on macOS, `apt install tesseract-ocr` on Linux)."
         ) from e
     doc = fitz.open(str(src))
     parts: list[str] = []
