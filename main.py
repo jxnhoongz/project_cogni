@@ -1,0 +1,90 @@
+"""Project Cogni CLI.
+
+Each pipeline stage is a subcommand. Stages are added as they are built
+(see PROGRESS.md build order). Today: `test-llm` to smoke-test the OpenRouter
+wiring.
+
+Usage:
+    python main.py test-llm            # trivial prompt, default (ingest) model
+    python main.py test-llm --stage script_en
+    python main.py test-llm --text     # raw text instead of JSON
+"""
+
+from __future__ import annotations
+
+import argparse
+import sys
+
+from cogni.config import load_config, load_style_token
+from cogni.llm import call_llm
+
+
+def cmd_test_llm(args: argparse.Namespace) -> int:
+    cfg = load_config()
+    models = cfg["llm"]["models"]
+    if args.stage not in models:
+        print(f"Unknown stage '{args.stage}'. Known: {', '.join(models)}", file=sys.stderr)
+        return 2
+    model = models[args.stage]
+    print(f"[test-llm] stage={args.stage} model={model}")
+
+    if args.text:
+        reply = call_llm(
+            model,
+            "Reply with exactly the word: pong",
+            json_out=False,
+            cfg=cfg,
+        )
+        print(f"[reply] {reply!r}")
+    else:
+        reply = call_llm(
+            model,
+            'Reply with a JSON object of the form {"status": "ok"} and nothing else.',
+            json_out=True,
+            cfg=cfg,
+        )
+        print(f"[reply] {reply!r}")
+    return 0
+
+
+def cmd_show_style(_args: argparse.Namespace) -> int:
+    print(load_style_token())
+    return 0
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog="cogni", description="Project Cogni pipeline")
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    p_test = sub.add_parser("test-llm", help="Smoke-test the OpenRouter LLM wiring")
+    p_test.add_argument(
+        "--stage",
+        default="ingest",
+        help="Which config.yaml llm.models stage to use (default: ingest)",
+    )
+    p_test.add_argument(
+        "--text",
+        action="store_true",
+        help="Request raw text instead of JSON",
+    )
+    p_test.set_defaults(func=cmd_test_llm)
+
+    p_style = sub.add_parser("show-style", help="Print the current STYLE token")
+    p_style.set_defaults(func=cmd_show_style)
+
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    try:
+        return args.func(args)
+    except (RuntimeError, FileNotFoundError, ValueError, KeyError) as e:
+        # Expected, actionable failures (missing key/file/config) — no stack trace.
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
