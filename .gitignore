@@ -7,28 +7,15 @@ credentials/*
 !credentials/.gitkeep
 !credentials/README.md
 
-# Generated content
-assets/images/*
-!assets/images/.gitkeep
+# Per-book projects (generated + user content — book text may be copyrighted)
+/projects/
+/.active_project
+
+# Shared background music (drop your own in; not committed)
 assets/audio/*
 !assets/audio/.gitkeep
-output/*
-!output/.gitkeep
 data/videos/*
 !data/videos/.gitkeep
-
-# Pipeline working files (generated / user content — book text may be copyrighted)
-input/*
-!input/.gitkeep
-audio/*
-!audio/.gitkeep
-images/*
-!images/.gitkeep
-clips/*
-!clips/.gitkeep
-/scenes.json
-/outline.json
-/recording_script.txt
 
 # Python
 __pycache__/

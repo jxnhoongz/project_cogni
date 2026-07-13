@@ -17,15 +17,24 @@ review and upload manually.
 
 Simple, debuggable, file-based core. Each stage is a plain function with one job,
 writing all state to disk so any stage re-runs alone. No agent frameworks. The
-web UI (later) is a thin wrapper that only calls pipeline functions.
+Gradio UI is a thin wrapper that only calls pipeline functions.
+
+**Projects (one per book).** Each book is a project folder under
+`projects/<slug>/` holding `book.md`, `outline.json`, `scenes.json`,
+`recording_script.txt`, and `images/ audio/ clips/ output/`. One project is
+active at a time (pointer: `.active_project`); every stage reads/writes inside
+it. `convert` creates + activates a project from the book filename. Background
+music is shared at the repo level (`assets/audio/`). CLI: `--project <slug>` +
+`projects`; UI: the Book dropdown. `config.yaml paths` are per-project; `shared`
+is repo-level.
 
 - `main.py` — CLI, one subcommand per stage.
-- `app.py` — Gradio UI (built last).
-- `cogni/config.py` — loads `config.yaml` + `.env`; fails loudly on missing keys.
+- `app.py` — Gradio UI.
+- `cogni/config.py` — config, projects/active-book, path resolution; fails loudly.
 - `cogni/llm.py` — `call_stage(cfg, stage, prompt, json_out=True)`. Provider per
   stage in `config.yaml`: `claude` = local `claude` CLI (Claude subscription, not
-  per-token) for Claude models; `openrouter` (per-token) only for models the
-  subscription can't reach — Gemini for the Khmer. English → Claude, Khmer → Gemini.
+  per-token) runs ingest + the whole script (English AND Khmer). `openrouter`
+  (per-token) is used ONLY for image generation.
 - `docs/STYLE.md` — single STYLE token appended to EVERY image prompt.
 
 ### The backbone: `scenes.json`

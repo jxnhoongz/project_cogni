@@ -21,7 +21,7 @@ from typing import Any
 
 from PIL import Image, ImageDraw, ImageFont
 
-from .config import load_config, resolve_path
+from .config import load_config, project_root, resolve_path, resolve_shared
 
 _MUSIC_EXTS = (".mp3", ".wav", ".m4a", ".aac", ".ogg", ".flac")
 
@@ -89,14 +89,14 @@ def _scene_clip(
 
     inputs: list[str] = []
     clip_path = scene.get("clip_path")
-    if clip_path and (resolve_path(cfg, "input").parent / clip_path).exists():
+    if clip_path and (project_root(cfg) / clip_path).exists():
         # Hero clip: scale/crop to frame, trim/loop to duration.
-        src = resolve_path(cfg, "input").parent / clip_path
+        src = project_root(cfg) / clip_path
         inputs += ["-stream_loop", "-1", "-i", str(src)]
         vchain = f"[0:v]scale={w}:{h}:force_original_aspect_ratio=increase,crop={w}:{h},fps={fps},format=yuv420p"
     else:
         # Still + Ken Burns zoom.
-        img = resolve_path(cfg, "input").parent / scene["image_path"]
+        img = project_root(cfg) / scene["image_path"]
         zmax = float(v.get("ken_burns_zoom", 1.08))
         step = (zmax - 1.0) / frames
         inputs += ["-loop", "1", "-framerate", str(fps), "-i", str(img)]
@@ -136,7 +136,7 @@ def _scene_clip(
 
 
 def _find_music(cfg: dict[str, Any]) -> Path | None:
-    music_dir = resolve_path(cfg, "music")
+    music_dir = resolve_shared(cfg, "music")
     if not music_dir.exists():
         return None
     for p in sorted(music_dir.iterdir()):
@@ -186,7 +186,7 @@ def assemble(*, force: bool = False, cfg: dict[str, Any] | None = None) -> Path:
         print(f"[assemble] cached — {final} exists (use --force to re-render)")
         return final
 
-    root_parent = resolve_path(cfg, "input").parent
+    root_parent = project_root(cfg)
     audio_dir = resolve_path(cfg, "audio")
     preview_sec = float(cfg["video"].get("preview_scene_sec", 4.0))
 

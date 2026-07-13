@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .config import load_config, resolve_path
+from .config import load_config, project_root, resolve_path
 
 AUDIO_EXTS = (".wav", ".mp3", ".m4a", ".flac", ".ogg", ".aac")
 
@@ -50,7 +50,7 @@ def check_audio(*, cfg: dict[str, Any] | None = None) -> bool:
         found = _find_audio(audio_dir, s["id"])
         if found:
             present += 1
-            rel = str(found.relative_to(resolve_path(cfg, "input").parent))
+            rel = str(found.relative_to(project_root(cfg)))
             if s.get("audio_path") != rel:
                 s["audio_path"] = rel
                 changed = True

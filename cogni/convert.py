@@ -11,7 +11,7 @@ from typing import Any
 
 from markitdown import MarkItDown
 
-from .config import load_config, resolve_path
+from .config import create_project, load_config, resolve_path, set_active_project, slugify
 
 # Plain-text inputs are already text — read them directly. markitdown's text
 # converter assumes ASCII and fails on non-ASCII bytes, so don't route them through it.
@@ -51,6 +51,12 @@ def convert(
         raise ValueError(
             f"Unsupported file type '{src.suffix}'. Supported: {supported}"
         )
+
+    # Each book is its own project, keyed by a slug of the filename.
+    slug = slugify(src.stem)
+    create_project(slug)
+    set_active_project(slug)
+    print(f"[convert] book '{slug}' is now the active project.")
 
     book_md = resolve_path(cfg, "book_md")
     if book_md.exists() and not force:
