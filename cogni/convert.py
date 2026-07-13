@@ -54,6 +54,34 @@ def _looks_corrupt(text: str) -> bool:
     return False
 
 
+def _looks_doubled(text: str, sample: int = 200, threshold: float = 0.5) -> bool:
+    """True if the extractor duplicated every glyph (e.g. faux-bold / overlapping text
+    layers), so words come out like 'WWhhaatt TThhee RRiicchh'. pdfminer/pdfplumber
+    hit this on some PDFs; PyMuPDF does not."""
+    words = re.findall(r"[A-Za-z]{4,}", text)[:sample]
+    if len(words) < 20:
+        return False
+    doubled = sum(
+        1 for w in words
+        if len(w) % 2 == 0 and all(w[i] == w[i + 1] for i in range(0, len(w) - 1, 2))
+    )
+    return doubled / len(words) >= threshold
+
+
+def _pdf_text_pymupdf(src: Path) -> str:
+    """Extract a PDF's text with PyMuPDF (fitz). Handles overlapping/doubled text
+    layers that pdfminer mangles, and needs no OCR/tesseract."""
+    try:
+        import fitz  # PyMuPDF
+    except ImportError:
+        return ""
+    doc = fitz.open(str(src))
+    try:
+        return "\n".join(doc[p].get_text() for p in range(doc.page_count)).strip()
+    finally:
+        doc.close()
+
+
 def _ocr_pdf(src: Path, dpi: int = 300) -> str:
     """Rasterize each PDF page and OCR it with tesseract (via PyMuPDF + pytesseract)."""
     try:
@@ -90,20 +118,28 @@ def _extract(src: Path) -> str:
     except Exception as e:
         raise RuntimeError(f"markitdown failed to convert {src}: {e}") from e
     text = (result.text_content or "").strip()
+    is_pdf = src.suffix.lower() == ".pdf"
 
-    if _looks_corrupt(text):
-        if src.suffix.lower() != ".pdf":
-            raise RuntimeError(
-                f"{src.name}: extracted text looks corrupt/unreadable. "
-                "Try an epub or a text-based source."
-            )
-        print("[convert] text looks font-locked/scanned — running OCR (this is slow) ...")
-        text = _ocr_pdf(src).strip()
-        if _looks_corrupt(text):
-            raise RuntimeError(
-                f"{src.name}: could not extract readable text even with OCR. "
-                "Try an epub or a text-based PDF."
-            )
+    if is_pdf and (_looks_corrupt(text) or _looks_doubled(text)):
+        why = "doubled/overlapping text" if _looks_doubled(text) else "font-locked/scanned"
+        print(f"[convert] markitdown text looks {why} — retrying with PyMuPDF ...")
+        alt = _pdf_text_pymupdf(src)
+        if alt and not _looks_corrupt(alt) and not _looks_doubled(alt):
+            print("[convert] PyMuPDF extracted clean text.")
+            text = alt
+        else:
+            print("[convert] PyMuPDF didn't resolve it — running OCR (this is slow) ...")
+            text = _ocr_pdf(src).strip()
+            if _looks_corrupt(text) or _looks_doubled(text):
+                raise RuntimeError(
+                    f"{src.name}: could not extract clean text even with OCR. "
+                    "Try an epub or a text-based PDF."
+                )
+    elif _looks_corrupt(text):
+        raise RuntimeError(
+            f"{src.name}: extracted text looks corrupt/unreadable. "
+            "Try an epub or a text-based source."
+        )
     return text
 
 
