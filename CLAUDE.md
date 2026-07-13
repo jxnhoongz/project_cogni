@@ -22,9 +22,10 @@ web UI (later) is a thin wrapper that only calls pipeline functions.
 - `main.py` — CLI, one subcommand per stage.
 - `app.py` — Gradio UI (built last).
 - `cogni/config.py` — loads `config.yaml` + `.env`; fails loudly on missing keys.
-- `cogni/llm.py` — `call_llm(model, prompt, json_out=True)` wrapping OpenRouter
-  (OpenAI-compatible). English → Claude, Khmer → Gemini; model per stage set in
-  `config.yaml`.
+- `cogni/llm.py` — `call_stage(cfg, stage, prompt, json_out=True)`. Provider per
+  stage in `config.yaml`: `claude` = local `claude` CLI (Claude subscription, not
+  per-token) for Claude models; `openrouter` (per-token) only for models the
+  subscription can't reach — Gemini for the Khmer. English → Claude, Khmer → Gemini.
 - `docs/STYLE.md` — single STYLE token appended to EVERY image prompt.
 
 ### The backbone: `scenes.json`
@@ -43,7 +44,8 @@ missing files/keys.
 
 ## Conventions
 
-- LLM routing lives in `config.yaml`, never hardcoded. OpenRouter slugs.
+- LLM routing (provider + model per stage) lives in `config.yaml`, never hardcoded.
+  Claude models via the subscription; OpenRouter only for what it can't reach.
 - Immutable data; small focused files; validate at boundaries; no silent errors.
 - Khmer is NATURAL SPOKEN meaning, NOT literal translation.
 - Higgsfield clips are produced OUTSIDE this repo via its MCP and dropped into

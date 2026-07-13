@@ -25,11 +25,11 @@ Do NOT one-shot — pause after each for me to test.
 | # | Stage | Status |
 |---|-------|--------|
 | 0 | Phase 0 re-foundation commit | ✅ Done |
-| 1 | Skeleton: config.yaml, .env.example, CLAUDE.md, `call_llm` helper | ⬜ Next |
-| 2 | `convert` — PDF/epub/docx → markitdown → `input/book.md` | ⬜ |
-| 3 | `ingest` — book.md → title + thesis + 6–12 key ideas → `outline.json` | ⬜ |
-| 4 | `script` — outline → scenes (EN first, then spoken Khmer via Gemini) + `recording_script.txt` + `check-audio` | ⬜ |
-| — | **[MANUAL]** I edit Khmer, record ONE scene, listen back — the real test | ⬜ |
+| 1 | Skeleton: config.yaml, .env.example, CLAUDE.md, `call_llm` helper | ✅ |
+| 2 | `convert` — PDF/epub/docx → markitdown → `input/book.md` | ✅ |
+| 3 | `ingest` — book.md → title + thesis + 6–12 key ideas → `outline.json` | ✅ |
+| 4 | `script` — outline → scenes (EN first, then spoken Khmer via Gemini) + `recording_script.txt` + `check-audio` | ✅ |
+| — | **[MANUAL]** I edit Khmer, record ONE scene, listen back — the real test | ⬜ Next |
 | 5 | `images` — scene → generate_image() → `images/scene_XXX.png` (mock first, then real) | ⬜ |
 | 6 | `assemble` — measure audio, still + Ken Burns (or clip), music, → `output/final.mp4` (1920×1080) | ⬜ |
 | 7 | Higgsfield drop-in — flag `animate=true`, generate clip via MCP, drop into `clips/`, re-run assemble | ⬜ |
@@ -54,8 +54,11 @@ Do NOT one-shot — pause after each for me to test.
   (1920×1080, H.264).
 
 ## Cross-cutting
-- One `call_llm(model, prompt, json=True)` helper wrapping OpenRouter (model per stage
-  set in `config.yaml`). Structured JSON + safe parsing.
+- One `call_stage(cfg, stage, prompt, ...)` helper. Each stage's provider+model is set
+  in `config.yaml`: provider `claude` runs the local `claude` CLI (billed to the Claude
+  subscription, NOT per-token) for Claude models; provider `openrouter` (per-token) is
+  used only for models the subscription can't reach — Gemini for Khmer. Structured JSON
+  + safe parsing.
 - Every stage caches; re-running reuses files unless `--force`.
 - `main.py` subcommands: `convert, ingest, script, check-audio, images, assemble`.
   `app.py` launches the UI.

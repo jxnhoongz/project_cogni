@@ -2,23 +2,48 @@
 # Everything the stages need that isn't a secret. Secrets live in .env.
 
 # --- LLM routing (per stage) -------------------------------------------------
-# All calls go through OpenRouter (OpenAI-compatible). These are OpenRouter model
-# slugs — verify/adjust at https://openrouter.ai/models. Change a stage's model
-# here; no code edits needed.
+# Each stage picks a provider + model:
+#   provider "claude"     -> local `claude` CLI, billed to the Claude subscription
+#                            (NOT per-token). Use for Claude models.
+#   provider "openrouter" -> OpenRouter API (per-token). Use ONLY for models the
+#                            subscription can't reach, e.g. Gemini for Khmer.
+# openrouter model slugs: https://openrouter.ai/models
 llm:
   base_url: "https://openrouter.ai/api/v1"
   timeout_sec: 120
   max_tokens: 8000
   models:
-    ingest: "anthropic/claude-haiku-4.5"      # cheap: outline + key ideas
-    script_en: "anthropic/claude-opus-4.8"    # strong: English narration
-    script_km: "google/gemini-2.5-pro"        # Gemini: natural spoken Khmer
+    ingest:
+      provider: "claude"                      # cheap: outline + key ideas
+      model: "claude-haiku-4-5"
+    script_en:
+      provider: "claude"                      # English narration (POV, not summary)
+      model: "claude-sonnet-5"                # fast + strong; use claude-opus-4-8 for a slower "polish" pass
+    script_km:
+      provider: "claude"                      # natural spoken Khmer (subscription)
+      model: "claude-sonnet-5"                # fast + strong; Opus batches too slow here
 
 # --- Ingest (book.md -> outline.json) ----------------------------------------
 ingest:
   max_input_chars: 240000    # ~60k tokens; larger books are evenly sampled (logged)
   min_ideas: 6
   max_ideas: 12
+
+# --- Script (outline.json -> scenes.json + recording_script.txt) -------------
+script:
+  min_scenes: 8
+  max_scenes: 14
+  # The narration point of view. This is COMMENTARY, not a summary — a stance.
+  # Override per book with `--angle "..."` (a respected classic gets a
+  # respectful-but-opinionated take; a criticized book gets real critique).
+  angle: >-
+    Take a clear, honest point of view — this is commentary, not a summary. Say
+    what the ideas genuinely get right, where they are weak, vague, or overstated,
+    and whether they actually apply to a young person on a normal salary in Phnom
+    Penh, Cambodia. Warm, specific, conversational, a little skeptical. First person.
+  # Optional few-shot file of the user's own natural spoken Khmer lines (one per
+  # line). Used to style the Khmer if present; ignored if absent.
+  khmer_examples: "khmer_style_examples.txt"
 
 # --- Image generation --------------------------------------------------------
 # provider "mock" writes a placeholder PNG (wired in Stage 5); swap to a real
