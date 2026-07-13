@@ -2,7 +2,7 @@
 
 Each book is a project. Pick a book from the dropdown (or upload a new one),
 then: generate script -> edit Khmer + tick Animate -> record one clip per scene
--> generate images -> generate video.
+-> generate images -> generate video. The Preview tab shows everything together.
 
 No real logic lives here — every button calls a stage function in cogni/.
 Run:  python app.py   (opens http://127.0.0.1:7860)
@@ -32,7 +32,7 @@ def _audio_status_md() -> str:
 
 def _refresh():
     """Component values for the active book: grid, recording script, scene picker,
-    audio status, gallery."""
+    audio status, gallery, preview storyboard, final video."""
     ids = store.scene_ids()
     return (
         store.scenes_table(),
@@ -40,6 +40,8 @@ def _refresh():
         gr.update(choices=ids, value=(ids[0] if ids else None)),
         _audio_status_md(),
         store.scene_images(),
+        store.preview_html(),
+        store.final_video_path(),
     )
 
 
@@ -71,27 +73,27 @@ def do_save_edits(df):
         rows = df.values.tolist() if hasattr(df, "values") else list(df)
         n = store.save_scene_edits(rows)
     except Exception as e:
-        return f"❌ {e}"
-    return f"✅ Saved edits for {n} scenes."
+        return f"❌ {e}", store.preview_html()
+    return f"✅ Saved edits for {n} scenes.", store.preview_html()
 
 
 def do_save_audio(scene_id, audio_path):
     if scene_id in (None, "") or not audio_path:
-        return "⚠️ Pick a scene and record/upload audio first.", _audio_status_md()
+        return "⚠️ Pick a scene and record/upload audio first.", _audio_status_md(), store.preview_html()
     try:
         store.save_audio(int(scene_id), audio_path)
     except Exception as e:
-        return f"❌ {e}", _audio_status_md()
-    return f"✅ Saved recording for scene {int(scene_id)}.", _audio_status_md()
+        return f"❌ {e}", _audio_status_md(), store.preview_html()
+    return f"✅ Saved recording for scene {int(scene_id)}.", _audio_status_md(), store.preview_html()
 
 
 def do_generate_images():
     try:
         images()
     except Exception as e:
-        return store.scene_images(), f"❌ {e}"
+        return store.scene_images(), f"❌ {e}", store.preview_html()
     imgs = store.scene_images()
-    return imgs, f"✅ {len(imgs)} images ready."
+    return imgs, f"✅ {len(imgs)} images ready.", store.preview_html()
 
 
 def do_generate_video():
@@ -99,8 +101,13 @@ def do_generate_video():
         images()
         final = assemble(force=True)
     except Exception as e:
-        return None, f"❌ {e}"
-    return str(final), f"✅ Rendered {final.name}. Preview below; download from the player."
+        return None, f"❌ {e}", store.preview_html(), store.final_video_path()
+    return (str(final), f"✅ Rendered {final.name}. Also shown in Preview.",
+            store.preview_html(), str(final))
+
+
+def do_refresh_preview():
+    return store.preview_html(), store.final_video_path()
 
 
 with gr.Blocks(title="Project Cogni") as demo:
@@ -112,8 +119,15 @@ with gr.Blocks(title="Project Cogni") as demo:
     with gr.Row():
         book_dd = gr.Dropdown(
             label="Book", choices=list_projects(), value=active_project(),
-            scale=4, info="Switch between books; upload a new one in tab 1.",
+            scale=4, info="Switch between books; upload a new one in the Book → Script tab.",
         )
+
+    with gr.Tab("Preview"):
+        gr.Markdown("Everything for the selected book — image, English, Khmer, captions, "
+                    "record/animate status — plus the final video once rendered.")
+        prev_refresh = gr.Button("Refresh preview")
+        prev_html = gr.HTML(store.preview_html())
+        prev_video = gr.Video(value=store.final_video_path(), label="final.mp4")
 
     with gr.Tab("1. Book → Script"):
         book = gr.File(label="New book (PDF / epub / docx)", file_types=[".pdf", ".epub", ".docx", ".doc", ".txt", ".md"])
@@ -157,14 +171,14 @@ with gr.Blocks(title="Project Cogni") as demo:
         vid_status = gr.Markdown()
         video = gr.Video(label="final.mp4")
 
-    refresh_outputs = [grid, rec_script, scene_pick, audio_md, gallery]
+    refresh_outputs = [grid, rec_script, scene_pick, audio_md, gallery, prev_html, prev_video]
     book_dd.change(switch_project, inputs=book_dd, outputs=refresh_outputs)
-    gen_btn.click(do_generate_script, inputs=book,
-                  outputs=[book_dd, gen_status, *refresh_outputs])
-    save_btn.click(do_save_edits, inputs=grid, outputs=save_status)
-    rec_btn.click(do_save_audio, inputs=[scene_pick, rec], outputs=[rec_status, audio_md])
-    img_btn.click(do_generate_images, inputs=None, outputs=[gallery, img_status])
-    vid_btn.click(do_generate_video, inputs=None, outputs=[video, vid_status])
+    gen_btn.click(do_generate_script, inputs=book, outputs=[book_dd, gen_status, *refresh_outputs])
+    save_btn.click(do_save_edits, inputs=grid, outputs=[save_status, prev_html])
+    rec_btn.click(do_save_audio, inputs=[scene_pick, rec], outputs=[rec_status, audio_md, prev_html])
+    img_btn.click(do_generate_images, inputs=None, outputs=[gallery, img_status, prev_html])
+    vid_btn.click(do_generate_video, inputs=None, outputs=[video, vid_status, prev_html, prev_video])
+    prev_refresh.click(do_refresh_preview, inputs=None, outputs=[prev_html, prev_video])
 
 
 if __name__ == "__main__":
