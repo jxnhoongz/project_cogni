@@ -14,6 +14,12 @@ llm:
     script_en: "anthropic/claude-opus-4.8"    # strong: English narration
     script_km: "google/gemini-2.5-pro"        # Gemini: natural spoken Khmer
 
+# --- Ingest (book.md -> outline.json) ----------------------------------------
+ingest:
+  max_input_chars: 240000    # ~60k tokens; larger books are evenly sampled (logged)
+  min_ideas: 6
+  max_ideas: 12
+
 # --- Image generation --------------------------------------------------------
 # provider "mock" writes a placeholder PNG (wired in Stage 5); swap to a real
 # provider later. env_key names the .env variable holding the provider's key.

@@ -17,11 +17,17 @@ import sys
 
 from cogni.config import load_config, load_style_token
 from cogni.convert import convert
+from cogni.ingest import ingest
 from cogni.llm import call_llm
 
 
 def cmd_convert(args: argparse.Namespace) -> int:
     convert(args.source, force=args.force)
+    return 0
+
+
+def cmd_ingest(args: argparse.Namespace) -> int:
+    ingest(force=args.force)
     return 0
 
 
@@ -83,6 +89,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--force", action="store_true", help="Overwrite an existing book.md"
     )
     p_convert.set_defaults(func=cmd_convert)
+
+    p_ingest = sub.add_parser(
+        "ingest", help="Extract title/thesis/key ideas from book.md to outline.json"
+    )
+    p_ingest.add_argument(
+        "--force", action="store_true", help="Overwrite an existing outline.json"
+    )
+    p_ingest.set_defaults(func=cmd_ingest)
 
     p_style = sub.add_parser("show-style", help="Print the current STYLE token")
     p_style.set_defaults(func=cmd_show_style)
