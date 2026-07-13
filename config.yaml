@@ -63,6 +63,7 @@ video:
   music_volume: 0.08         # low background music (0.0-1.0)
   fade_sec: 0.5
   burn_captions: true
+  preview_scene_sec: 4.0     # silent placeholder length when a scene has no recording
 
 # --- Filesystem layout (relative to project root) ----------------------------
 paths:
