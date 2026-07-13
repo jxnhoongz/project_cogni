@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import sys
 
+from cogni.assemble import assemble
 from cogni.audio import check_audio
 from cogni.config import load_config, load_style_token
 from cogni.convert import convert
@@ -26,6 +27,11 @@ from cogni.script import script
 
 def cmd_images(args: argparse.Namespace) -> int:
     images(force=args.force)
+    return 0
+
+
+def cmd_assemble(args: argparse.Namespace) -> int:
+    assemble(force=args.force)
     return 0
 
 
@@ -135,6 +141,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--force", action="store_true", help="Regenerate existing images"
     )
     p_images.set_defaults(func=cmd_images)
+
+    p_assemble = sub.add_parser(
+        "assemble", help="Render output/final.mp4 from scenes + images (+ audio)"
+    )
+    p_assemble.add_argument(
+        "--force", action="store_true", help="Re-render an existing final.mp4"
+    )
+    p_assemble.set_defaults(func=cmd_assemble)
 
     p_style = sub.add_parser("show-style", help="Print the current STYLE token")
     p_style.set_defaults(func=cmd_show_style)
