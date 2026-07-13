@@ -12,6 +12,9 @@ markitdown[pdf,docx]>=0.0.1
 # Web UI
 gradio>=4.0.0
 
+# Images (placeholder generation + still handling)
+pillow>=10.0.0
+
 # Audio processing (measure durations, mix background music)
 pydub>=0.25.0
 

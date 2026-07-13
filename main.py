@@ -18,9 +18,15 @@ import sys
 from cogni.audio import check_audio
 from cogni.config import load_config, load_style_token
 from cogni.convert import convert
+from cogni.images import images
 from cogni.ingest import ingest
 from cogni.llm import call_stage
 from cogni.script import script
+
+
+def cmd_images(args: argparse.Namespace) -> int:
+    images(force=args.force)
+    return 0
 
 
 def cmd_convert(args: argparse.Namespace) -> int:
@@ -121,6 +127,14 @@ def build_parser() -> argparse.ArgumentParser:
         "check-audio", help="Verify every scene has a recorded audio file"
     )
     p_audio.set_defaults(func=cmd_check_audio)
+
+    p_images = sub.add_parser(
+        "images", help="Generate a still per scene into images/scene_XXX.png"
+    )
+    p_images.add_argument(
+        "--force", action="store_true", help="Regenerate existing images"
+    )
+    p_images.set_defaults(func=cmd_images)
 
     p_style = sub.add_parser("show-style", help="Print the current STYLE token")
     p_style.set_defaults(func=cmd_show_style)
