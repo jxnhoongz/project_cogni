@@ -19,6 +19,7 @@ from cogni.convert import convert
 from cogni.images import images
 from cogni.ingest import ingest
 from cogni.narrate import narrate
+from cogni.fact_review import fact_review
 from cogni.review import review
 from cogni.script import script
 from cogni.script_review import revise_narration, script_review
@@ -53,14 +54,15 @@ def _refresh():
         store.visuals_table(),
         store.review_status_md(),
         store.narration_review_md(),
+        store.fact_review_md(),
     )
 
 
 def _hold_refresh():
     """No-op updates for the refresh_outputs slots — used by intermediate progress
     yields so streaming a status message doesn't recompute/clear the rest. Length
-    must match refresh_outputs (and _refresh's tuple): 9."""
-    return tuple(gr.update() for _ in range(9))
+    must match refresh_outputs (and _refresh's tuple): 10."""
+    return tuple(gr.update() for _ in range(10))
 
 
 def switch_project(slug):
@@ -114,16 +116,31 @@ def do_script_review():
     return msg, store.narration_review_md(), store.preview_html()
 
 
+def do_fact_review():
+    try:
+        summary = fact_review()
+    except Exception as e:
+        return f"❌ {e}", store.fact_review_md(), store.preview_html()
+    if summary["flagged"]:
+        msg = (f"⚠️ {summary['n_ok']}/{summary['n_scenes']} grounded — flagged "
+               f"{summary['flagged']}. Revise them (grounds in the book), then re-check.")
+    else:
+        msg = f"✅ All {summary['n_scenes']} scenes are grounded in the book."
+    return msg, store.fact_review_md(), store.preview_html()
+
+
 def do_revise_narration():
     try:
         changed = revise_narration()
     except Exception as e:
-        return store.scenes_table(), f"❌ {e}", store.narration_review_md(), store.preview_html()
+        return (store.scenes_table(), f"❌ {e}", store.narration_review_md(),
+                store.fact_review_md(), store.preview_html())
     if not changed:
-        msg = "Nothing flagged — run **Review narration** first."
+        msg = "Nothing flagged — run **Review narration** or **Fact-check** first."
     else:
-        msg = f"✅ Rewrote scenes {changed}. Re-run review, then re-narrate those scenes."
-    return store.scenes_table(), msg, store.narration_review_md(), store.preview_html()
+        msg = f"✅ Rewrote scenes {changed}. Re-run the checks, then re-narrate those scenes."
+    return (store.scenes_table(), msg, store.narration_review_md(),
+            store.fact_review_md(), store.preview_html())
 
 
 def do_animate_all(flag):
@@ -272,6 +289,12 @@ with gr.Blocks(title="Project Cogni") as demo:
             sreview_btn = gr.Button("Review narration (free)", variant="primary")
             revise_btn = gr.Button("Revise flagged scenes")
         nreview_md = gr.Markdown(store.narration_review_md())
+        gr.Markdown("### Fact-check vs the book")
+        gr.Markdown("Ground the narration in `book.md` — flags claims that contradict "
+                    "the book, aren't in it, or are outside facts stated as certainty. "
+                    "**Revise flagged scenes** (above) fixes them using the book. Free.")
+        fcheck_btn = gr.Button("Fact-check vs book (free)", variant="primary")
+        freview_md = gr.Markdown(store.fact_review_md())
 
     with gr.Tab("3. Visuals + Review"):
         gr.Markdown(
@@ -326,14 +349,16 @@ with gr.Blocks(title="Project Cogni") as demo:
         video = gr.Video(label="final.mp4")
 
     refresh_outputs = [grid, scene_pick, audio_md, gallery, prev_html, prev_video,
-                       vis_grid, review_md, nreview_md]
+                       vis_grid, review_md, nreview_md, freview_md]
     book_dd.change(switch_project, inputs=book_dd, outputs=refresh_outputs)
     gen_btn.click(do_generate_script, inputs=book, outputs=[book_dd, gen_status, *refresh_outputs])
     save_btn.click(do_save_edits, inputs=grid, outputs=[save_status, prev_html])
     anim_all_btn.click(lambda: do_animate_all(True), inputs=None, outputs=[grid, save_status, prev_html])
     anim_none_btn.click(lambda: do_animate_all(False), inputs=None, outputs=[grid, save_status, prev_html])
     sreview_btn.click(do_script_review, inputs=None, outputs=[save_status, nreview_md, prev_html])
-    revise_btn.click(do_revise_narration, inputs=None, outputs=[grid, save_status, nreview_md, prev_html])
+    fcheck_btn.click(do_fact_review, inputs=None, outputs=[save_status, freview_md, prev_html])
+    revise_btn.click(do_revise_narration, inputs=None,
+                     outputs=[grid, save_status, nreview_md, freview_md, prev_html])
     vis_btn.click(do_generate_visuals, inputs=None, outputs=[vis_grid, vis_status, review_md, prev_html])
     vis_save_btn.click(do_save_visual_edits, inputs=vis_grid, outputs=[vis_status, review_md, prev_html])
     review_btn.click(do_run_review, inputs=None, outputs=[vis_status, review_md, prev_html])

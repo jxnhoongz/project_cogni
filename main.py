@@ -30,6 +30,7 @@ from cogni.images import images
 from cogni.ingest import ingest
 from cogni.llm import call_stage
 from cogni.narrate import narrate
+from cogni.fact_review import fact_review
 from cogni.review import review
 from cogni.script import script
 from cogni.script_review import revise_narration, script_review
@@ -62,6 +63,11 @@ def cmd_revise(args: argparse.Namespace) -> int:
     ids = [int(x) for x in args.scenes.split(",")] if args.scenes else None
     revise_narration(ids)
     return 0
+
+
+def cmd_fact_check(_args: argparse.Namespace) -> int:
+    summary = fact_review()
+    return 0 if not summary["flagged"] else 1
 
 
 def cmd_visuals(args: argparse.Namespace) -> int:
@@ -221,9 +227,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_revise.add_argument(
         "--scenes", default=None,
-        help="Comma-separated scene ids to revise (default: all flagged by script-review)",
+        help="Comma-separated scene ids to revise (default: all flagged by script-review/fact-check)",
     )
     p_revise.set_defaults(func=cmd_revise)
+
+    p_fact = sub.add_parser(
+        "fact-check",
+        help="Check narration claims against book.md and flag grounding issues (no credits)",
+    )
+    p_fact.set_defaults(func=cmd_fact_check)
 
     p_visuals = sub.add_parser(
         "visuals",

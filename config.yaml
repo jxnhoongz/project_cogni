@@ -27,6 +27,9 @@ llm:
     script_review:
       provider: "claude"                      # critic: flag weak narration (hook, filler, vague, summary-not-verdict)
       model: "claude-opus-4-8"                # opus: stricter critique (revise still uses the sonnet `script` writer)
+    fact_review:
+      provider: "claude"                      # grounding: check narration claims against book.md (contradicts / not-in-book / opinion)
+      model: "claude-opus-4-8"                # opus: careful reading of the book vs the script
 
 # --- Ingest (book.md -> outline.json) ----------------------------------------
 ingest:

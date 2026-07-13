@@ -67,15 +67,41 @@ def _review_prompt(scenes: list[dict[str, Any]]) -> str:
     )
 
 
-def _revise_prompt(scenes: list[dict[str, Any]], targets: list[dict[str, Any]]) -> str:
+def _combined_issues(s: dict[str, Any]) -> list[str]:
+    """A scene's open review notes from BOTH the narration critic and the fact-check
+    agent (fact notes tagged so `revise` grounds them in the book)."""
+    issues: list[str] = []
+    nr = s.get("narration_review")
+    if isinstance(nr, dict) and not nr.get("ok"):
+        issues += list(nr.get("issues", []))
+    fr = s.get("fact_review")
+    if isinstance(fr, dict) and not fr.get("ok"):
+        issues += [f"[fact] {i}" for i in fr.get("issues", [])]
+    return issues
+
+
+def _revise_prompt(
+    scenes: list[dict[str, Any]], targets: list[dict[str, Any]], book: str | None = None
+) -> str:
     notes = "\n\n".join(
-        f"Scene {t['id']} — fix these: " + "; ".join(t["issues"]) for t in targets
+        f"Scene {t['id']} — fix these: "
+        + ("; ".join(t["issues"]) if t["issues"] else "sharpen and tighten")
+        for t in targets
     )
     ids = [t["id"] for t in targets]
+    book_block = ""
+    if book:
+        book_block = (
+            "\n\nBOOK TEXT — ground any claim in THIS. For notes tagged [fact], fix them "
+            "by matching what the book actually says or by reframing the claim as your own "
+            "take / 'widely reported'; never invent quotes, stats, or details:\n"
+            f"<<<BOOK\n{book}\nBOOK\n"
+        )
     return (
         "Here is the full narration for a long-form book-verdict video, for context "
         "(keep the overall arc and continuity intact):\n\n"
-        f"{_scenes_block(scenes)}\n\n"
+        f"{_scenes_block(scenes)}"
+        f"{book_block}\n\n"
         f"Rewrite ONLY these scenes to fix the notes, keeping each scene's role in the "
         f"arc, first person, natural spoken narration (about 2-5 sentences). Scene 1, if "
         f"listed, must open on a provocative question — never the verdict.\n\n{notes}\n\n"
@@ -169,22 +195,37 @@ def revise_narration(
     by_id = {int(s["id"]): s for s in scenes}
     if scene_ids is None:
         targets = [
-            {"id": s["id"], "issues": (s.get("narration_review") or {}).get("issues", [])}
-            for s in scenes
-            if isinstance(s.get("narration_review"), dict) and not s["narration_review"].get("ok")
+            {"id": s["id"], "issues": _combined_issues(s)}
+            for s in scenes if _combined_issues(s)
         ]
     else:
         targets = [
-            {"id": int(i), "issues": (by_id[int(i)].get("narration_review") or {}).get("issues", [])}
+            {"id": int(i), "issues": _combined_issues(by_id[int(i)])}
             for i in scene_ids if int(i) in by_id
         ]
     if not targets:
-        print("[revise] nothing flagged — run `script-review` first (or pass scene ids).")
+        print("[revise] nothing flagged — run `script-review` or `fact-check` first "
+              "(or pass scene ids).")
         return []
 
-    print(f"[revise] rewriting narration for scenes {[t['id'] for t in targets]} ...")
+    # If any target has a fact-grounding issue, give the rewriter the book to fix against.
+    has_fact = any(
+        isinstance(by_id[t["id"]].get("fact_review"), dict)
+        and not by_id[t["id"]]["fact_review"].get("ok")
+        for t in targets
+    )
+    book = None
+    if has_fact:
+        try:
+            from .fact_review import load_book_excerpt
+            book = load_book_excerpt(cfg, 80_000)
+        except FileNotFoundError:
+            book = None  # no book (e.g. synthetic project) — revise notes without it
+
+    print(f"[revise] rewriting narration for scenes {[t['id'] for t in targets]}"
+          + (" (grounded in the book)" if book else "") + " ...")
     data = call_stage(
-        cfg, "script", _revise_prompt(scenes, targets),
+        cfg, "script", _revise_prompt(scenes, targets, book),
         system=_REVISE_SYSTEM, json_out=True,
     )
     revised = data.get("scenes")
@@ -202,7 +243,9 @@ def revise_narration(
         text = str(r.get("narration") or "").strip()
         if sid in by_id and text:
             by_id[sid]["narration"] = text
-            by_id[sid]["narration_review"] = None  # rewritten — must be re-reviewed
+            # rewritten — both reviews are stale and must be re-run
+            by_id[sid]["narration_review"] = None
+            by_id[sid]["fact_review"] = None
             changed.append(sid)
 
     scenes_path.write_text(
