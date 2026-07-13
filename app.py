@@ -1,8 +1,8 @@
 """Project Cogni — web UI (thin wrapper over the pipeline stages).
 
-Each book is a project. Pick a book from the dropdown (or upload a new one),
-then: generate script -> edit Khmer + tick Animate -> record one clip per scene
--> generate images -> generate video. The Preview tab shows everything together.
+Each book is a project. Pick a book (or upload one), then: generate script ->
+edit the narration + tick Animate -> generate narration (TTS) -> generate images
+-> generate video. The Preview tab shows everything together.
 
 No real logic lives here — every button calls a stage function in cogni/.
 Run:  python app.py   (opens http://127.0.0.1:7860)
@@ -14,11 +14,17 @@ import gradio as gr
 
 from cogni import store
 from cogni.assemble import assemble
-from cogni.config import active_project, list_projects, set_active_project
+from cogni.config import active_project, list_projects, load_config, set_active_project
 from cogni.convert import convert
 from cogni.images import images
 from cogni.ingest import ingest
+from cogni.narrate import narrate
 from cogni.script import script
+
+VOICES = [
+    "en-GB-RyanNeural", "en-US-AndrewNeural", "en-US-GuyNeural",
+    "en-GB-SoniaNeural", "en-US-AriaNeural",
+]
 
 
 def _audio_status_md() -> str:
@@ -26,17 +32,16 @@ def _audio_status_md() -> str:
     if not rows:
         return "_No scenes yet._"
     have = sum(1 for _, ok in rows if ok)
-    marks = "  ".join(f"{i}{'✅' if ok else '⬜'}" for i, ok in rows)
-    return f"**Recordings: {have}/{len(rows)}**\n\n{marks}"
+    marks = "  ".join(f"{i}{'🔊' if ok else '⬜'}" for i, ok in rows)
+    return f"**Narrated: {have}/{len(rows)}**\n\n{marks}"
 
 
 def _refresh():
-    """Component values for the active book: grid, recording script, scene picker,
-    audio status, gallery, preview storyboard, final video."""
+    """Component values for the active book: grid, scene picker, audio status,
+    gallery, preview storyboard, final video."""
     ids = store.scene_ids()
     return (
         store.scenes_table(),
-        store.recording_script_text(),
         gr.update(choices=ids, value=(ids[0] if ids else None)),
         _audio_status_md(),
         store.scene_images(),
@@ -63,7 +68,7 @@ def do_generate_script(file):
     slug = active_project()
     return (
         gr.update(choices=list_projects(), value=slug),
-        f"✅ Script ready for '{slug}' — {len(store.scene_ids())} scenes. Edit the Khmer, then record.",
+        f"✅ Script ready for '{slug}' — {len(store.scene_ids())} scenes. Edit it, then narrate.",
         *_refresh(),
     )
 
@@ -74,17 +79,28 @@ def do_save_edits(df):
         n = store.save_scene_edits(rows)
     except Exception as e:
         return f"❌ {e}", store.preview_html()
-    return f"✅ Saved edits for {n} scenes.", store.preview_html()
+    return f"✅ Saved edits for {n} scenes. Re-run narration to update the audio.", store.preview_html()
+
+
+def do_generate_narration(voice):
+    try:
+        cfg = load_config()
+        if voice:
+            cfg["tts"]["voice"] = voice
+        narrate(force=True, cfg=cfg)
+    except Exception as e:
+        return f"❌ {e}", _audio_status_md(), store.preview_html()
+    return f"✅ Narrated all scenes with {voice}.", _audio_status_md(), store.preview_html()
 
 
 def do_save_audio(scene_id, audio_path):
     if scene_id in (None, "") or not audio_path:
-        return "⚠️ Pick a scene and record/upload audio first.", _audio_status_md(), store.preview_html()
+        return "⚠️ Pick a scene and upload audio first.", _audio_status_md(), store.preview_html()
     try:
         store.save_audio(int(scene_id), audio_path)
     except Exception as e:
         return f"❌ {e}", _audio_status_md(), store.preview_html()
-    return f"✅ Saved recording for scene {int(scene_id)}.", _audio_status_md(), store.preview_html()
+    return f"✅ Overrode scene {int(scene_id)} audio.", _audio_status_md(), store.preview_html()
 
 
 def do_generate_images():
@@ -113,8 +129,8 @@ def do_refresh_preview():
 with gr.Blocks(title="Project Cogni") as demo:
     gr.Markdown(
         "# Project Cogni\n"
-        "Book → English+Khmer script → **your** recorded voice → 16:9 video. "
-        "The pipeline automates assembly only; the book, the voice, and the Khmer are yours."
+        "Book → honest **verdict** script → TTS narration → 16:9 video. "
+        "Not a summary — a point of view."
     )
     with gr.Row():
         book_dd = gr.Dropdown(
@@ -123,8 +139,8 @@ with gr.Blocks(title="Project Cogni") as demo:
         )
 
     with gr.Tab("Preview"):
-        gr.Markdown("Everything for the selected book — image, English, Khmer, captions, "
-                    "record/animate status — plus the final video once rendered.")
+        gr.Markdown("Everything for the selected book — image, narration, caption, "
+                    "audio/animate status — plus the final video once rendered.")
         prev_refresh = gr.Button("Refresh preview")
         prev_html = gr.HTML(store.preview_html())
         prev_video = gr.Video(value=store.final_video_path(), label="final.mp4")
@@ -134,27 +150,31 @@ with gr.Blocks(title="Project Cogni") as demo:
         gen_btn = gr.Button("Generate script (a few minutes)", variant="primary")
         gen_status = gr.Markdown()
 
-    with gr.Tab("2. Edit Khmer"):
-        gr.Markdown("Edit the **Khmer (edit me)** column and tick **Animate** for hero scenes. English is reference only.")
+    with gr.Tab("2. Edit script"):
+        gr.Markdown("Edit the **Narration** (this is what the narrator reads) and tick "
+                    "**Animate** for hero scenes. Re-narrate after editing.")
         grid = gr.Dataframe(
             headers=store.TABLE_HEADERS,
-            datatype=["number", "str", "str", "bool"],
+            datatype=["number", "str", "bool"],
             value=store.scenes_table(),
             interactive=True, wrap=True,
-            column_widths=["6%", "40%", "42%", "12%"],
+            column_widths=["6%", "82%", "12%"],
         )
         save_btn = gr.Button("Save edits", variant="primary")
         save_status = gr.Markdown()
-        gr.Markdown("### Recording script (copy the Khmer to read)")
-        rec_script = gr.Code(value=store.recording_script_text(), label="recording_script.txt")
 
-    with gr.Tab("3. Record audio"):
-        gr.Markdown("Record (or upload) one clip per scene. Saved as `audio/scene_XXX.wav`.")
-        scene_pick = gr.Dropdown(label="Scene", choices=store.scene_ids(), value=(store.scene_ids()[0] if store.scene_ids() else None))
-        rec = gr.Audio(label="Record or upload", sources=["microphone", "upload"], type="filepath")
-        rec_btn = gr.Button("Save recording", variant="primary")
-        rec_status = gr.Markdown()
+    with gr.Tab("3. Narration"):
+        gr.Markdown("Generate the voiceover for every scene (edge-tts, free).")
+        with gr.Row():
+            voice_dd = gr.Dropdown(label="Voice", choices=VOICES, value=VOICES[0], scale=3)
+        narr_btn = gr.Button("Generate narration", variant="primary")
+        narr_status = gr.Markdown()
         audio_md = gr.Markdown(_audio_status_md())
+        with gr.Accordion("Override one scene with your own audio (optional)", open=False):
+            scene_pick = gr.Dropdown(label="Scene", choices=store.scene_ids(), value=(store.scene_ids()[0] if store.scene_ids() else None))
+            rec = gr.Audio(label="Upload / record", sources=["upload", "microphone"], type="filepath")
+            rec_btn = gr.Button("Save override")
+            rec_status = gr.Markdown()
 
     with gr.Tab("4. Images"):
         gr.Markdown("Generate a still per scene (cached — only new/changed scenes cost). "
@@ -166,15 +186,16 @@ with gr.Blocks(title="Project Cogni") as demo:
 
     with gr.Tab("5. Generate video"):
         gr.Markdown("Renders `output/final.mp4` from the stills (+ Ken Burns, captions, music) "
-                    "and your recordings. Scenes without a recording use a short silent placeholder.")
+                    "and the narration. Scenes without audio use a short silent placeholder.")
         vid_btn = gr.Button("Generate video", variant="primary")
         vid_status = gr.Markdown()
         video = gr.Video(label="final.mp4")
 
-    refresh_outputs = [grid, rec_script, scene_pick, audio_md, gallery, prev_html, prev_video]
+    refresh_outputs = [grid, scene_pick, audio_md, gallery, prev_html, prev_video]
     book_dd.change(switch_project, inputs=book_dd, outputs=refresh_outputs)
     gen_btn.click(do_generate_script, inputs=book, outputs=[book_dd, gen_status, *refresh_outputs])
     save_btn.click(do_save_edits, inputs=grid, outputs=[save_status, prev_html])
+    narr_btn.click(do_generate_narration, inputs=voice_dd, outputs=[narr_status, audio_md, prev_html])
     rec_btn.click(do_save_audio, inputs=[scene_pick, rec], outputs=[rec_status, audio_md, prev_html])
     img_btn.click(do_generate_images, inputs=None, outputs=[gallery, img_status, prev_html])
     vid_btn.click(do_generate_video, inputs=None, outputs=[video, vid_status, prev_html, prev_video])

@@ -20,6 +20,9 @@ gradio>=5.0.0
 # Images (placeholder generation + still handling)
 pillow>=10.0.0
 
+# TTS narration (free, no key)
+edge-tts>=6.1.0
+
 # Audio processing (measure durations, mix background music)
 pydub>=0.25.0
 
