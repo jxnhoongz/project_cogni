@@ -1,72 +1,72 @@
-# Project Progress
+# Project Cogni — Progress
 
-## Current State: Milestone 0 Complete
+> **DEFINITION OF DONE:** Done = ONE finished video I have actually posted. Not a
+> working repo. The pipeline automates ASSEMBLY only. It does NOT pick the book,
+> record my voice, or fix my Khmer — those are mine.
 
-**Last Updated:** 2026-01-23
+## The Plan (one line)
+Upload a book PDF → generate an English + natural spoken Khmer script → I record my
+OWN Khmer voice → auto-assemble a 16:9 long-form video (still images with a subtle
+Ken Burns zoom, optional Higgsfield "hero" clips, background music) → I review and
+upload manually.
 
-## What's Done
+## Current State
+Re-founded around the own-voice Khmer long-form pipeline. Old TTS / shorts / scale /
+auto-distribution foundation stripped out. Rebuilding the core (see build order).
 
-### Milestone 0: Foundation Setup ✅
-- Project structure created (`cogni/`, `data/`, `assets/`, `output/`, `tests/`)
-- `data/books.json` with 5 starter books (Atomic Habits, Deep Work, Thinking Fast and Slow, Psychology of Money, Can't Hurt Me)
-- Environment config (`.env.example`, `.gitignore`)
-- Python dependencies (`requirements.txt`)
-- Setup verification script (`verify_setup.py`)
-- 18 agent skills in `.claude/skills/`
+## Backbone
+A single `scenes.json` that each stage enriches. Every stage is a standalone function
++ CLI subcommand, independently re-runnable, and cached (re-running reuses files unless
+`--force`). All state lives on disk so any stage re-runs alone.
 
-## What's Next
+## Build Order
+Do NOT one-shot — pause after each for me to test.
 
-### Milestone 1: MVP Short
-Build first end-to-end short video pipeline:
-1. Select book + angle → dedup check
-2. Generate script → review/approve
-3. Generate Da Vinci style images from script
-4. Generate TTS audio
-5. Render 1080x1920 vertical video with captions
-6. Review and upload to YouTube
+| # | Stage | Status |
+|---|-------|--------|
+| 0 | Phase 0 re-foundation commit | ✅ Done |
+| 1 | Skeleton: config.yaml, .env.example, CLAUDE.md, `call_llm` helper | ⬜ Next |
+| 2 | `convert` — PDF/epub/docx → markitdown → `input/book.md` | ⬜ |
+| 3 | `ingest` — book.md → title + thesis + 6–12 key ideas → `outline.json` | ⬜ |
+| 4 | `script` — outline → scenes (EN first, then spoken Khmer via Gemini) + `recording_script.txt` + `check-audio` | ⬜ |
+| — | **[MANUAL]** I edit Khmer, record ONE scene, listen back — the real test | ⬜ |
+| 5 | `images` — scene → generate_image() → `images/scene_XXX.png` (mock first, then real) | ⬜ |
+| 6 | `assemble` — measure audio, still + Ken Burns (or clip), music, → `output/final.mp4` (1920×1080) | ⬜ |
+| 7 | Higgsfield drop-in — flag `animate=true`, generate clip via MCP, drop into `clips/`, re-run assemble | ⬜ |
+| 8 | Gradio UI — thin wrapper over pipeline functions | ⬜ |
 
-## Setup Instructions (New Machine)
+## Stages (detail)
+- **0. convert** — uploaded PDF/epub/docx → markitdown → `input/book.md`
+- **1. ingest** — book.md → title + thesis + 6–12 key ideas (cheap model) → `outline.json`
+- **2. script** — outline → scenes array:
+  - a) `narration_en` first (strong model)
+  - b) `narration_km` = NATURAL SPOKEN Khmer conveying the English meaning, NOT literal
+    translation. Route Khmer to Gemini via OpenRouter. Use `khmer_style_examples.txt`
+    as few-shot if present.
+  - c) an `image_prompt` per scene.
+  - Save `scenes.json` + `recording_script.txt`. THEN STOP.
+- **3. [MANUAL]** — I edit Khmer in the UI, record each scene, upload as
+  `audio/scene_001.wav …`. `check-audio` verifies every scene has a matching file.
+- **4. images** — each scene → `generate_image(image_prompt)` → `images/scene_XXX.png` (cached).
+- **5. assemble** — per scene: measure audio duration; if `clips/scene_XXX.mp4` exists
+  use it, else still image + subtle Ken Burns; optional burned captions. Concatenate in
+  id order, mix low-volume music from `assets/audio/`, export `output/final.mp4`
+  (1920×1080, H.264).
 
-```bash
-cd "/path/to/proj_cogni"
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+## Cross-cutting
+- One `call_llm(model, prompt, json=True)` helper wrapping OpenRouter (model per stage
+  set in `config.yaml`). Structured JSON + safe parsing.
+- Every stage caches; re-running reuses files unless `--force`.
+- `main.py` subcommands: `convert, ingest, script, check-audio, images, assemble`.
+  `app.py` launches the UI.
+- Fail loudly on missing files/keys.
+- Visual style is NOT decided yet: a single STYLE token in `docs/STYLE.md`, appended to
+  EVERY image_prompt. Placeholder `[STYLE TBD]` for now.
 
-# Copy and configure .env
-cp .env.example .env
-# Edit .env with your API keys:
-# - OPENAI_API_KEY (required for DALL-E images)
-# - ELEVENLABS_API_KEY (required for TTS)
-# - ANTHROPIC_API_KEY (optional, for script generation)
-
-# Verify setup
-python verify_setup.py
-```
-
-## Key Design Decisions
-
-| Decision | Choice |
-|----------|--------|
-| Automation | Python scripts |
-| Video rendering | ffmpeg |
-| Data storage | JSON files (local-first) |
-| Image style | AI-generated Da Vinci oil paintings |
-| Admin panel (M4) | Direct file access, no separate API |
-| Architecture | Semi-automated with human review before upload |
-
-## Milestones Overview
-
-| # | Milestone | Status |
-|---|-----------|--------|
-| M0 | Foundation Setup | ✅ Complete |
-| M1 | MVP Short | 🔜 Next |
-| M2 | Add Midform | Pending |
-| M3 | Polish & Automate | Pending |
-| M4 | Admin Panel | Pending |
-| M5 | Analytics Loop | Pending |
-
-## Reference Docs
-
-- [Project Milestones Design](docs/plans/2026-01-23-project-milestones-design.md)
-- [Milestone 0 Implementation Plan](docs/plans/2026-01-23-milestone-0-foundation.md)
+## Kept + adapted from the old build
+- `video-renderer/` → reworked for 16:9 long-form (ffmpeg + caption logic)
+- `copyright-compliance-checker/` → guardrail
+- `script-quality-checker/` → esp. `references/generic_phrases.md`
+- `asset-librarian/generate_image.py` → reworked into a pluggable `generate_image()` provider
+- `midform-script-generator/` → folded into the EN+KM script stage
+- `data/books.json` → same shape, repointed at my own sources
