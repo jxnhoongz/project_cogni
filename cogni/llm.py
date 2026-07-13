@@ -143,9 +143,13 @@ def _call_claude(model: str, prompt: str, system: str | None) -> str:
         cmd += ["--system-prompt", system]
     try:
         proc = subprocess.run(
-            cmd, input=prompt, text=True, capture_output=True,
+            cmd, input=prompt, capture_output=True,
             timeout=_CLAUDE_TIMEOUT_SEC, cwd=tempfile.gettempdir(),
             env=_claude_env(),
+            # Force UTF-8 both ways. Without this, subprocess uses the locale
+            # codec (cp1252 on Windows), which mangles the CLI's UTF-8 output —
+            # em-dashes and curly quotes come back as mojibake ("—" -> "â€").
+            text=True, encoding="utf-8", errors="replace",
         )
     except FileNotFoundError as e:
         raise RuntimeError(

@@ -23,10 +23,10 @@ llm:
       model: "claude-sonnet-5"
     review:
       provider: "claude"                      # validator: gate visuals before spending image/clip credits
-      model: "claude-sonnet-5"                # bump to claude-opus-4-8 for a stricter pass
+      model: "claude-opus-4-8"                # opus: stricter judgment (this gates real spend)
     script_review:
       provider: "claude"                      # critic: flag weak narration (hook, filler, vague, summary-not-verdict)
-      model: "claude-sonnet-5"                # revise reuses the stronger `script` model
+      model: "claude-opus-4-8"                # opus: stricter critique (revise still uses the sonnet `script` writer)
 
 # --- Ingest (book.md -> outline.json) ----------------------------------------
 ingest:
