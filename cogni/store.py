@@ -132,6 +132,19 @@ def review_status_md(cfg: dict[str, Any] | None = None) -> str:
     return "\n\n".join(lines)
 
 
+def set_animate_all(flag: bool, cfg: dict[str, Any] | None = None) -> int:
+    """Set animate = flag on every scene (the 'animate everything' toggle). Returns count."""
+    cfg = cfg or load_config()
+    p = resolve_path(cfg, "scenes")
+    if not p.exists():
+        raise FileNotFoundError("no scenes.json yet — generate a script first")
+    doc = json.loads(p.read_text(encoding="utf-8"))
+    for s in doc["scenes"]:
+        s["animate"] = bool(flag)
+    p.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return len(doc["scenes"])
+
+
 def save_audio(scene_id: int, src_path: str, cfg: dict[str, Any] | None = None) -> Path:
     """Save/override a scene's audio as audio/scene_XXX.wav (transcoded via ffmpeg)."""
     cfg = cfg or load_config()
@@ -200,6 +213,9 @@ _PREVIEW_CSS = """
 .cg-badge.off{opacity:.55}
 .cg-badge.anim{color:#c99a2e;border-color:#c99a2e}
 .cg-badge.bad{color:#d1584f;border-color:#d1584f}
+.cg-kf{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+.cg-kf .cg-img{width:210px;max-width:20vw}
+.cg-arrow{opacity:.55;font-size:1.4rem}
 </style>
 """
 
@@ -218,6 +234,16 @@ def preview_html(cfg: dict[str, Any] | None = None) -> str:
         p = (root / ip) if ip else None
         if p and p.exists():
             img = f'<img class="cg-img" src="{_b64_thumb(p)}"/>'
+            # For animate scenes, show the end keyframe beside the start (start -> end).
+            ep = s.get("end_image_path")
+            epath = (root / ep) if ep else None
+            if s.get("animate") and epath and epath.exists():
+                img = (
+                    '<div class="cg-kf">'
+                    f'{img}<span class="cg-arrow">→</span>'
+                    f'<img class="cg-img" src="{_b64_thumb(epath)}"/>'
+                    "</div>"
+                )
         else:
             img = '<div class="cg-noimg">no image yet</div>'
         has_audio = _find_audio(audio_dir, s["id"]) is not None
