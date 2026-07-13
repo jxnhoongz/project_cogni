@@ -9,6 +9,11 @@ httpx>=0.27.0
 # Document conversion (PDF/epub/docx -> markdown)
 markitdown[pdf,docx]>=0.0.1
 
+# OCR fallback for font-locked / scanned PDFs (needs the tesseract binary:
+# `brew install tesseract` on macOS, `apt install tesseract-ocr` on Debian/Ubuntu)
+pymupdf>=1.24.0
+pytesseract>=0.3.10
+
 # Web UI
 gradio>=5.0.0
 
