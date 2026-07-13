@@ -66,15 +66,18 @@ video:
   burn_captions: true
   preview_scene_sec: 4.0     # silent placeholder length when a scene has no recording
 
-# --- Filesystem layout (relative to project root) ----------------------------
+# --- Filesystem layout -------------------------------------------------------
+# `paths` are per-book, resolved under projects/<active-book-slug>/.
 paths:
-  input: "input"                       # uploaded book + converted book.md
+  book_md: "book.md"
+  outline: "outline.json"
+  scenes: "scenes.json"
+  recording_script: "recording_script.txt"
   audio: "audio"                       # my recorded scene_XXX.wav files
   images: "images"                     # generated stills
   clips: "clips"                       # optional Higgsfield hero clips
   output: "output"                     # final.mp4
+
+# `shared` paths are repo-level, shared across all books.
+shared:
   music: "assets/audio"                # background music source
-  book_md: "input/book.md"
-  outline: "outline.json"
-  scenes: "scenes.json"
-  recording_script: "recording_script.txt"

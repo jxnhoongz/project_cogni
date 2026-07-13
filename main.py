@@ -17,12 +17,30 @@ import sys
 
 from cogni.assemble import assemble
 from cogni.audio import check_audio
-from cogni.config import load_config, load_style_token
+from cogni.config import (
+    active_project,
+    list_projects,
+    load_config,
+    load_style_token,
+    set_active_project,
+)
 from cogni.convert import convert
 from cogni.images import images
 from cogni.ingest import ingest
 from cogni.llm import call_stage
 from cogni.script import script
+
+
+def cmd_projects(_args: argparse.Namespace) -> int:
+    projects = list_projects()
+    if not projects:
+        print("No books yet — run `convert <book-file>` to create one.")
+        return 0
+    active = active_project()
+    for slug in projects:
+        print(f"  {'* ' if slug == active else '  '}{slug}")
+    print("\n(* = active)")
+    return 0
 
 
 def cmd_images(args: argparse.Namespace) -> int:
@@ -83,7 +101,14 @@ def cmd_show_style(_args: argparse.Namespace) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="cogni", description="Project Cogni pipeline")
+    parser.add_argument(
+        "--project", default=None,
+        help="Act on this book (slug); default is the active one. See `projects`.",
+    )
     sub = parser.add_subparsers(dest="command", required=True)
+
+    p_projects = sub.add_parser("projects", help="List books and show the active one")
+    p_projects.set_defaults(func=cmd_projects)
 
     p_test = sub.add_parser("test-llm", help="Smoke-test the OpenRouter LLM wiring")
     p_test.add_argument(
@@ -159,6 +184,8 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    if getattr(args, "project", None):
+        set_active_project(args.project)
     try:
         return args.func(args)
     except (RuntimeError, FileNotFoundError, ValueError, KeyError) as e:

@@ -1,7 +1,8 @@
 """Project Cogni — web UI (thin wrapper over the pipeline stages).
 
-Flow: upload a book -> generate script -> edit the Khmer + tick Animate ->
-record one clip per scene -> Generate video -> preview & download.
+Each book is a project. Pick a book from the dropdown (or upload a new one),
+then: generate script -> edit Khmer + tick Animate -> record one clip per scene
+-> generate images -> generate video.
 
 No real logic lives here — every button calls a stage function in cogni/.
 Run:  python app.py   (opens http://127.0.0.1:7860)
@@ -13,6 +14,7 @@ import gradio as gr
 
 from cogni import store
 from cogni.assemble import assemble
+from cogni.config import active_project, list_projects, set_active_project
 from cogni.convert import convert
 from cogni.images import images
 from cogni.ingest import ingest
@@ -28,22 +30,39 @@ def _audio_status_md() -> str:
     return f"**Recordings: {have}/{len(rows)}**\n\n{marks}"
 
 
+def _refresh():
+    """Component values for the active book: grid, recording script, scene picker,
+    audio status, gallery."""
+    ids = store.scene_ids()
+    return (
+        store.scenes_table(),
+        store.recording_script_text(),
+        gr.update(choices=ids, value=(ids[0] if ids else None)),
+        _audio_status_md(),
+        store.scene_images(),
+    )
+
+
+def switch_project(slug):
+    if slug:
+        set_active_project(slug)
+    return _refresh()
+
+
 def do_generate_script(file):
     if not file:
-        return ("⚠️ Upload a book file first.", gr.update(), "", gr.update(), _audio_status_md())
+        return (gr.update(), "⚠️ Upload a book file first.", *_refresh())
     try:
         convert(file, force=True)
         ingest(force=True)
         script(force=True)
     except Exception as e:  # surface stage errors in the UI, don't crash the app
-        return (f"❌ {e}", gr.update(), "", gr.update(), _audio_status_md())
-    ids = store.scene_ids()
+        return (gr.update(), f"❌ {e}", *_refresh())
+    slug = active_project()
     return (
-        f"✅ Script ready — {len(ids)} scenes. Edit the Khmer below, then record.",
-        store.scenes_table(),
-        store.recording_script_text(),
-        gr.update(choices=ids, value=(ids[0] if ids else None)),
-        _audio_status_md(),
+        gr.update(choices=list_projects(), value=slug),
+        f"✅ Script ready for '{slug}' — {len(store.scene_ids())} scenes. Edit the Khmer, then record.",
+        *_refresh(),
     )
 
 
@@ -90,9 +109,14 @@ with gr.Blocks(title="Project Cogni") as demo:
         "Book → English+Khmer script → **your** recorded voice → 16:9 video. "
         "The pipeline automates assembly only; the book, the voice, and the Khmer are yours."
     )
+    with gr.Row():
+        book_dd = gr.Dropdown(
+            label="Book", choices=list_projects(), value=active_project(),
+            scale=4, info="Switch between books; upload a new one in tab 1.",
+        )
 
     with gr.Tab("1. Book → Script"):
-        book = gr.File(label="Book (PDF / epub / docx)", file_types=[".pdf", ".epub", ".docx", ".doc", ".txt", ".md"])
+        book = gr.File(label="New book (PDF / epub / docx)", file_types=[".pdf", ".epub", ".docx", ".doc", ".txt", ".md"])
         gen_btn = gr.Button("Generate script (a few minutes)", variant="primary")
         gen_status = gr.Markdown()
 
@@ -102,8 +126,7 @@ with gr.Blocks(title="Project Cogni") as demo:
             headers=store.TABLE_HEADERS,
             datatype=["number", "str", "str", "bool"],
             value=store.scenes_table(),
-            interactive=True,
-            wrap=True,
+            interactive=True, wrap=True,
             column_widths=["6%", "40%", "42%", "12%"],
         )
         save_btn = gr.Button("Save edits", variant="primary")
@@ -113,8 +136,7 @@ with gr.Blocks(title="Project Cogni") as demo:
 
     with gr.Tab("3. Record audio"):
         gr.Markdown("Record (or upload) one clip per scene. Saved as `audio/scene_XXX.wav`.")
-        with gr.Row():
-            scene_pick = gr.Dropdown(label="Scene", choices=store.scene_ids(), value=(store.scene_ids()[0] if store.scene_ids() else None))
+        scene_pick = gr.Dropdown(label="Scene", choices=store.scene_ids(), value=(store.scene_ids()[0] if store.scene_ids() else None))
         rec = gr.Audio(label="Record or upload", sources=["microphone", "upload"], type="filepath")
         rec_btn = gr.Button("Save recording", variant="primary")
         rec_status = gr.Markdown()
@@ -135,8 +157,10 @@ with gr.Blocks(title="Project Cogni") as demo:
         vid_status = gr.Markdown()
         video = gr.Video(label="final.mp4")
 
+    refresh_outputs = [grid, rec_script, scene_pick, audio_md, gallery]
+    book_dd.change(switch_project, inputs=book_dd, outputs=refresh_outputs)
     gen_btn.click(do_generate_script, inputs=book,
-                  outputs=[gen_status, grid, rec_script, scene_pick, audio_md])
+                  outputs=[book_dd, gen_status, *refresh_outputs])
     save_btn.click(do_save_edits, inputs=grid, outputs=save_status)
     rec_btn.click(do_save_audio, inputs=[scene_pick, rec], outputs=[rec_status, audio_md])
     img_btn.click(do_generate_images, inputs=None, outputs=[gallery, img_status])

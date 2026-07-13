@@ -18,7 +18,7 @@ from typing import Any
 import httpx
 from PIL import Image, ImageDraw, ImageFont
 
-from .config import load_config, load_style_token, require_env, resolve_path
+from .config import load_config, load_style_token, project_root, require_env, resolve_path
 
 
 def _canvas_size(cfg: dict[str, Any]) -> tuple[int, int]:
@@ -108,7 +108,7 @@ def images(*, force: bool = False, cfg: dict[str, Any] | None = None) -> Path:
     images_dir = resolve_path(cfg, "images")
     images_dir.mkdir(parents=True, exist_ok=True)
     style = load_style_token()
-    root_parent = resolve_path(cfg, "input").parent  # project root, for relative paths
+    root_parent = project_root(cfg)  # project root, for relative paths
 
     provider = cfg["image"]["provider"]
     made = cached = 0

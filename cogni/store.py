@@ -13,12 +13,14 @@ from pathlib import Path
 from typing import Any
 
 from .audio import _find_audio
-from .config import load_config, resolve_path
+from .config import active_project, load_config, project_root, resolve_path
 
 TABLE_HEADERS = ["ID", "English (meaning)", "Khmer (edit me)", "Animate"]
 
 
 def load_scenes(cfg: dict[str, Any] | None = None) -> dict[str, Any] | None:
+    if active_project() is None:
+        return None
     cfg = cfg or load_config()
     p = resolve_path(cfg, "scenes")
     return json.loads(p.read_text(encoding="utf-8")) if p.exists() else None
@@ -84,6 +86,8 @@ def audio_status(cfg: dict[str, Any] | None = None) -> list[tuple[int, bool]]:
 
 
 def recording_script_text(cfg: dict[str, Any] | None = None) -> str:
+    if active_project() is None:
+        return ""
     cfg = cfg or load_config()
     p = resolve_path(cfg, "recording_script")
     return p.read_text(encoding="utf-8") if p.exists() else ""
@@ -100,7 +104,7 @@ def scene_images(cfg: dict[str, Any] | None = None) -> list[tuple[str, str]]:
     doc = load_scenes(cfg)
     if not doc:
         return []
-    root = resolve_path(cfg, "input").parent
+    root = project_root(cfg)
     out: list[tuple[str, str]] = []
     for s in doc["scenes"]:
         ip = s.get("image_path")
