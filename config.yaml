@@ -1,0 +1,47 @@
+# Project Cogni — pipeline configuration.
+# Everything the stages need that isn't a secret. Secrets live in .env.
+
+# --- LLM routing (per stage) -------------------------------------------------
+# All calls go through OpenRouter (OpenAI-compatible). These are OpenRouter model
+# slugs — verify/adjust at https://openrouter.ai/models. Change a stage's model
+# here; no code edits needed.
+llm:
+  base_url: "https://openrouter.ai/api/v1"
+  timeout_sec: 120
+  max_tokens: 8000
+  models:
+    ingest: "anthropic/claude-haiku-4.5"      # cheap: outline + key ideas
+    script_en: "anthropic/claude-opus-4.8"    # strong: English narration
+    script_km: "google/gemini-2.5-pro"        # Gemini: natural spoken Khmer
+
+# --- Image generation --------------------------------------------------------
+# provider "mock" writes a placeholder PNG (wired in Stage 5); swap to a real
+# provider later. env_key names the .env variable holding the provider's key.
+image:
+  provider: "mock"
+  model: "dall-e-3"
+  size: "1792x1024"          # 16:9
+  env_key: "IMAGE_PROVIDER_API_KEY"
+
+# --- Video assembly ----------------------------------------------------------
+video:
+  width: 1920
+  height: 1080
+  fps: 30
+  ken_burns_zoom: 1.08       # subtle zoom across a scene's duration
+  music_volume: 0.08         # low background music (0.0-1.0)
+  fade_sec: 0.5
+  burn_captions: true
+
+# --- Filesystem layout (relative to project root) ----------------------------
+paths:
+  input: "input"                       # uploaded book + converted book.md
+  audio: "audio"                       # my recorded scene_XXX.wav files
+  images: "images"                     # generated stills
+  clips: "clips"                       # optional Higgsfield hero clips
+  output: "output"                     # final.mp4
+  music: "assets/audio"                # background music source
+  book_md: "input/book.md"
+  outline: "outline.json"
+  scenes: "scenes.json"
+  recording_script: "recording_script.txt"
