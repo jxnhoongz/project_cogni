@@ -132,6 +132,30 @@ def review_status_md(cfg: dict[str, Any] | None = None) -> str:
     return "\n\n".join(lines)
 
 
+def narration_review_md(cfg: dict[str, Any] | None = None) -> str:
+    """Human-readable narration-review state: strong vs flagged scenes + the notes."""
+    doc = load_scenes(cfg)
+    if not doc:
+        return "_No scenes yet._"
+    scenes = doc["scenes"]
+    reviewed = [s for s in scenes if isinstance(s.get("narration_review"), dict)]
+    if not reviewed:
+        return "_Narration not reviewed yet — click **Review narration** (free)._"
+    flagged = [s for s in reviewed if not (s.get("narration_review") or {}).get("ok")]
+    lines = []
+    if not flagged:
+        lines.append(f"✅ **All {len(reviewed)} scenes read strong.**")
+    else:
+        n_ok = len(reviewed) - len(flagged)
+        lines.append(f"⚠️ **{n_ok}/{len(scenes)} strong.** Revise the flagged scenes "
+                     "(or edit by hand), then re-review.")
+    for s in flagged:
+        issues = (s.get("narration_review") or {}).get("issues", [])
+        bullet = "; ".join(issues) if issues else "needs a sharper pass"
+        lines.append(f"- **Scene {s['id']}** — {bullet}")
+    return "\n\n".join(lines)
+
+
 def set_animate_all(flag: bool, cfg: dict[str, Any] | None = None) -> int:
     """Set animate = flag on every scene (the 'animate everything' toggle). Returns count."""
     cfg = cfg or load_config()
