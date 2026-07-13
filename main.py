@@ -28,7 +28,13 @@ from cogni.convert import convert
 from cogni.images import images
 from cogni.ingest import ingest
 from cogni.llm import call_stage
+from cogni.narrate import narrate
 from cogni.script import script
+
+
+def cmd_narrate(args: argparse.Namespace) -> int:
+    narrate(force=args.force)
+    return 0
 
 
 def cmd_projects(_args: argparse.Namespace) -> int:
@@ -141,8 +147,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_ingest.set_defaults(func=cmd_ingest)
 
     p_script = sub.add_parser(
-        "script",
-        help="Generate EN+KM narration scenes.json + recording_script.txt from outline.json",
+        "script", help="Generate the verdict narration scenes.json from outline.json"
     )
     p_script.add_argument(
         "--force", action="store_true", help="Regenerate an existing scenes.json"
@@ -154,8 +159,16 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_script.set_defaults(func=cmd_script)
 
+    p_narrate = sub.add_parser(
+        "narrate", help="TTS the narration to audio/scene_XXX.mp3 (edge-tts)"
+    )
+    p_narrate.add_argument(
+        "--force", action="store_true", help="Re-narrate existing audio"
+    )
+    p_narrate.set_defaults(func=cmd_narrate)
+
     p_audio = sub.add_parser(
-        "check-audio", help="Verify every scene has a recorded audio file"
+        "check-audio", help="Verify every scene has a narration audio file"
     )
     p_audio.set_defaults(func=cmd_check_audio)
 

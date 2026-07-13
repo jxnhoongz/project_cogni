@@ -1,8 +1,8 @@
 """Thin scenes.json / audio helpers for the web UI.
 
-Keeps the UI dumb: read scenes into an editable table, write Khmer + animate
-edits back, save a recording for a scene, report which scenes have audio. All
-real work stays in the stage functions.
+Keeps the UI dumb: read scenes into an editable table, write narration + animate
+edits back, save/override a scene's audio, report status, build a preview
+storyboard. All real work stays in the stage functions.
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from PIL import Image
 from .audio import _find_audio
 from .config import active_project, load_config, project_root, resolve_path
 
-TABLE_HEADERS = ["ID", "English (meaning)", "Khmer (edit me)", "Animate"]
+TABLE_HEADERS = ["ID", "Narration (edit me)", "Animate"]
 
 
 def load_scenes(cfg: dict[str, Any] | None = None) -> dict[str, Any] | None:
@@ -32,18 +32,18 @@ def load_scenes(cfg: dict[str, Any] | None = None) -> dict[str, Any] | None:
 
 
 def scenes_table(cfg: dict[str, Any] | None = None) -> list[list[Any]]:
-    """Rows for the UI grid: [id, english, khmer, animate]."""
+    """Rows for the UI grid: [id, narration, animate]."""
     doc = load_scenes(cfg)
     if not doc:
         return []
     return [
-        [s["id"], s["narration_en"], s["narration_km"], bool(s.get("animate"))]
+        [s["id"], s.get("narration") or s.get("narration_en", ""), bool(s.get("animate"))]
         for s in doc["scenes"]
     ]
 
 
 def save_scene_edits(rows: list[list[Any]], cfg: dict[str, Any] | None = None) -> int:
-    """Write the Khmer + animate columns from `rows` back into scenes.json."""
+    """Write the narration + animate columns from `rows` back into scenes.json."""
     cfg = cfg or load_config()
     p = resolve_path(cfg, "scenes")
     if not p.exists():
@@ -53,19 +53,18 @@ def save_scene_edits(rows: list[list[Any]], cfg: dict[str, Any] | None = None) -
     for s in doc["scenes"]:
         r = by_id.get(s["id"])
         if r:
-            s["narration_km"] = str(r[2]).strip()
-            s["animate"] = bool(r[3])
+            s["narration"] = str(r[1]).strip()
+            s["animate"] = bool(r[2])
     p.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return len(by_id)
 
 
 def save_audio(scene_id: int, src_path: str, cfg: dict[str, Any] | None = None) -> Path:
-    """Save a recording for a scene as audio/scene_XXX.wav (transcoded via ffmpeg)."""
+    """Save/override a scene's audio as audio/scene_XXX.wav (transcoded via ffmpeg)."""
     cfg = cfg or load_config()
     audio_dir = resolve_path(cfg, "audio")
     audio_dir.mkdir(parents=True, exist_ok=True)
     stem = f"scene_{int(scene_id):03d}"
-    # Drop any other-extension recording for this scene so there's exactly one.
     for e in (".mp3", ".m4a", ".flac", ".ogg", ".aac"):
         alt = audio_dir / f"{stem}{e}"
         if alt.exists():
@@ -81,21 +80,13 @@ def save_audio(scene_id: int, src_path: str, cfg: dict[str, Any] | None = None) 
 
 
 def audio_status(cfg: dict[str, Any] | None = None) -> list[tuple[int, bool]]:
-    """(scene_id, has_recording) for every scene."""
+    """(scene_id, has_audio) for every scene."""
     cfg = cfg or load_config()
     doc = load_scenes(cfg)
     if not doc:
         return []
     audio_dir = resolve_path(cfg, "audio")
     return [(s["id"], _find_audio(audio_dir, s["id"]) is not None) for s in doc["scenes"]]
-
-
-def recording_script_text(cfg: dict[str, Any] | None = None) -> str:
-    if active_project() is None:
-        return ""
-    cfg = cfg or load_config()
-    p = resolve_path(cfg, "recording_script")
-    return p.read_text(encoding="utf-8") if p.exists() else ""
 
 
 def scene_ids(cfg: dict[str, Any] | None = None) -> list[int]:
@@ -130,8 +121,7 @@ _PREVIEW_CSS = """
 .cg-noimg{width:440px;max-width:42vw;height:200px;display:flex;align-items:center;justify-content:center;background:rgba(128,128,128,.12);border-radius:8px;opacity:.6;flex:0 0 auto}
 .cg-body{flex:1;min-width:0}
 .cg-head{font-weight:600;margin-bottom:10px}
-.cg-en{opacity:.72;margin-bottom:10px;line-height:1.5}
-.cg-km{font-size:1.15rem;line-height:1.7}
+.cg-narr{line-height:1.6}
 .cg-badge{font-size:.72rem;padding:2px 9px;border-radius:999px;margin-left:6px;border:1px solid rgba(128,128,128,.4);white-space:nowrap}
 .cg-badge.on{color:#2e9e4f;border-color:#2e9e4f}
 .cg-badge.off{opacity:.55}
@@ -141,7 +131,7 @@ _PREVIEW_CSS = """
 
 
 def preview_html(cfg: dict[str, Any] | None = None) -> str:
-    """A storyboard: image + English + Khmer + caption + record/animate status per scene."""
+    """A storyboard: image + narration + caption + audio/animate status per scene."""
     doc = load_scenes(cfg)
     if not doc:
         return "<p style='opacity:.7'>No scenes yet — pick a book above, or upload one in tab 1 and generate a script.</p>"
@@ -156,16 +146,15 @@ def preview_html(cfg: dict[str, Any] | None = None) -> str:
             img = f'<img class="cg-img" src="{_b64_thumb(p)}"/>'
         else:
             img = '<div class="cg-noimg">no image yet</div>'
-        rec = _find_audio(audio_dir, s["id"]) is not None
-        badges = [f'<span class="cg-badge {"on" if rec else "off"}">{"🎙 recorded" if rec else "⬜ no audio"}</span>']
+        has_audio = _find_audio(audio_dir, s["id"]) is not None
+        badges = [f'<span class="cg-badge {"on" if has_audio else "off"}">{"🔊 narrated" if has_audio else "⬜ no audio"}</span>']
         if s.get("animate"):
             badges.append('<span class="cg-badge anim">🎬 animate</span>')
         cap = html.escape(s.get("on_screen_text") or "")
         cards.append(
             f'<div class="cg-card">{img}<div class="cg-body">'
             f'<div class="cg-head">Scene {s["id"]}{" · " + cap if cap else ""} {"".join(badges)}</div>'
-            f'<div class="cg-en">{html.escape(s["narration_en"])}</div>'
-            f'<div class="cg-km">{html.escape(s["narration_km"])}</div>'
+            f'<div class="cg-narr">{html.escape(s.get("narration") or s.get("narration_en", ""))}</div>'
             f"</div></div>"
         )
     title = html.escape(doc.get("project_title", ""))
