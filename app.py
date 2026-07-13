@@ -19,7 +19,9 @@ from cogni.convert import convert
 from cogni.images import images
 from cogni.ingest import ingest
 from cogni.narrate import narrate
+from cogni.review import review
 from cogni.script import script
+from cogni.visuals import visuals
 
 VOICES = [
     "en-GB-RyanNeural", "en-US-AndrewNeural", "en-US-GuyNeural",
@@ -38,7 +40,7 @@ def _audio_status_md() -> str:
 
 def _refresh():
     """Component values for the active book: grid, scene picker, audio status,
-    gallery, preview storyboard, final video."""
+    gallery, preview storyboard, final video, visuals grid, review status."""
     ids = store.scene_ids()
     return (
         store.scenes_table(),
@@ -47,6 +49,8 @@ def _refresh():
         store.scene_images(),
         store.preview_html(),
         store.final_video_path(),
+        store.visuals_table(),
+        store.review_status_md(),
     )
 
 
@@ -80,6 +84,46 @@ def do_save_edits(df):
     except Exception as e:
         return f"❌ {e}", store.preview_html()
     return f"✅ Saved edits for {n} scenes. Re-run narration to update the audio.", store.preview_html()
+
+
+def do_generate_visuals():
+    try:
+        visuals(force=True)
+    except Exception as e:
+        return store.visuals_table(), f"❌ {e}", store.review_status_md(), store.preview_html()
+    return (
+        store.visuals_table(),
+        f"✅ Visual prompts ready for {len(store.scene_ids())} scenes. "
+        "Review them (free) before generating images.",
+        store.review_status_md(),
+        store.preview_html(),
+    )
+
+
+def do_save_visual_edits(df):
+    try:
+        rows = df.values.tolist() if hasattr(df, "values") else list(df)
+        n = store.save_visual_edits(rows)
+    except Exception as e:
+        return f"❌ {e}", store.review_status_md(), store.preview_html()
+    return (
+        f"✅ Saved prompt edits for {n} scenes. Re-run review to re-check them.",
+        store.review_status_md(),
+        store.preview_html(),
+    )
+
+
+def do_run_review():
+    try:
+        summary = review()
+    except Exception as e:
+        return f"❌ {e}", store.review_status_md(), store.preview_html()
+    if summary["passed"]:
+        msg = f"✅ Reviewed {summary['n_scenes']} scenes — all passed. Safe to generate images."
+    else:
+        msg = (f"⚠️ Reviewed {summary['n_scenes']} scenes — issues in {summary['failing']}. "
+               "Fix the prompts below, or generate anyway (skips the gate).")
+    return msg, store.review_status_md(), store.preview_html()
 
 
 def do_generate_narration(voice):
@@ -163,7 +207,29 @@ with gr.Blocks(title="Project Cogni") as demo:
         save_btn = gr.Button("Save edits", variant="primary")
         save_status = gr.Markdown()
 
-    with gr.Tab("3. Narration"):
+    with gr.Tab("3. Visuals + Review"):
+        gr.Markdown(
+            "Generate two **keyframe** prompts (start / end) + a **motion** prompt per "
+            "scene, then **review** them for free before spending any image/clip credits. "
+            "Edit any prompt, save, and re-run review. Images stay blocked until review "
+            "passes (or you generate anyway)."
+        )
+        with gr.Row():
+            vis_btn = gr.Button("Generate visual prompts", variant="primary")
+            review_btn = gr.Button("Run review (free, no credits)")
+        vis_status = gr.Markdown()
+        vis_grid = gr.Dataframe(
+            headers=store.VISUALS_HEADERS,
+            datatype=["number", "str", "str", "str"],
+            value=store.visuals_table(),
+            interactive=True, wrap=True,
+            column_widths=["6%", "33%", "33%", "28%"],
+        )
+        vis_save_btn = gr.Button("Save prompt edits")
+        gr.Markdown("### Review")
+        review_md = gr.Markdown(store.review_status_md())
+
+    with gr.Tab("4. Narration"):
         gr.Markdown("Generate the voiceover for every scene (edge-tts, free).")
         with gr.Row():
             voice_dd = gr.Dropdown(label="Voice", choices=VOICES, value=VOICES[0], scale=3)
@@ -176,25 +242,29 @@ with gr.Blocks(title="Project Cogni") as demo:
             rec_btn = gr.Button("Save override")
             rec_status = gr.Markdown()
 
-    with gr.Tab("4. Images"):
-        gr.Markdown("Generate a still per scene (cached — only new/changed scenes cost). "
+    with gr.Tab("5. Images"):
+        gr.Markdown("Generate a still per scene from the **start** keyframe prompt (cached "
+                    "— only new/changed scenes cost). Blocked until **review** passes. "
                     "OpenRouter `gemini-2.5-flash-image`, ~$0.04/image.")
         img_btn = gr.Button("Generate images", variant="primary")
         img_status = gr.Markdown()
         gallery = gr.Gallery(value=store.scene_images(), label="Scene stills",
                              columns=3, height=560, object_fit="contain")
 
-    with gr.Tab("5. Generate video"):
+    with gr.Tab("6. Generate video"):
         gr.Markdown("Renders `output/final.mp4` from the stills (+ Ken Burns, captions, music) "
                     "and the narration. Scenes without audio use a short silent placeholder.")
         vid_btn = gr.Button("Generate video", variant="primary")
         vid_status = gr.Markdown()
         video = gr.Video(label="final.mp4")
 
-    refresh_outputs = [grid, scene_pick, audio_md, gallery, prev_html, prev_video]
+    refresh_outputs = [grid, scene_pick, audio_md, gallery, prev_html, prev_video, vis_grid, review_md]
     book_dd.change(switch_project, inputs=book_dd, outputs=refresh_outputs)
     gen_btn.click(do_generate_script, inputs=book, outputs=[book_dd, gen_status, *refresh_outputs])
     save_btn.click(do_save_edits, inputs=grid, outputs=[save_status, prev_html])
+    vis_btn.click(do_generate_visuals, inputs=None, outputs=[vis_grid, vis_status, review_md, prev_html])
+    vis_save_btn.click(do_save_visual_edits, inputs=vis_grid, outputs=[vis_status, review_md, prev_html])
+    review_btn.click(do_run_review, inputs=None, outputs=[vis_status, review_md, prev_html])
     narr_btn.click(do_generate_narration, inputs=voice_dd, outputs=[narr_status, audio_md, prev_html])
     rec_btn.click(do_save_audio, inputs=[scene_pick, rec], outputs=[rec_status, audio_md, prev_html])
     img_btn.click(do_generate_images, inputs=None, outputs=[gallery, img_status, prev_html])

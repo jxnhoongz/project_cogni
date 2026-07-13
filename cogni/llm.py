@@ -13,7 +13,9 @@ Stages call `call_stage(cfg, "<stage>", prompt, ...)`; it resolves the stage's
 from __future__ import annotations
 
 import json
+import os
 import re
+import shutil
 import subprocess
 import tempfile
 from typing import Any
@@ -29,6 +31,31 @@ _APP_HEADERS = {
 }
 # Generous ceiling for a single `claude -p` call (Opus long-form can take a while).
 _CLAUDE_TIMEOUT_SEC = 300
+
+
+def _claude_env() -> dict[str, str] | None:
+    """Environment for the `claude` subprocess.
+
+    On Windows, Claude Code needs to know where git-bash is. When invoked from a
+    clean subprocess env that lacks it, `claude` errors out. If
+    CLAUDE_CODE_GIT_BASH_PATH isn't already set, point it at a discovered bash.exe
+    so the headless call works out of the box. Returns None on macOS/Linux (inherit
+    the parent environment unchanged).
+    """
+    if os.name != "nt":
+        return None
+    env = os.environ.copy()
+    if env.get("CLAUDE_CODE_GIT_BASH_PATH"):
+        return env
+    for cand in (
+        shutil.which("bash"),
+        r"C:\Program Files\Git\bin\bash.exe",
+        r"C:\Program Files\Git\usr\bin\bash.exe",
+    ):
+        if cand and os.path.exists(cand):
+            env["CLAUDE_CODE_GIT_BASH_PATH"] = cand
+            break
+    return env
 
 
 def call_stage(
@@ -98,8 +125,17 @@ def _call_claude(model: str, prompt: str, system: str | None) -> str:
     agentic), project settings skipped, and in a neutral cwd so no project
     CLAUDE.md leaks in — we want a plain model completion, not Claude Code.
     """
+    # Resolve the executable ourselves: on Windows `claude` is a .CMD shim and
+    # subprocess/CreateProcess won't apply PATHEXT to a bare name, so we must pass
+    # the full resolved path. shutil.which handles both (plain binary on macOS/Linux).
+    exe = shutil.which("claude")
+    if not exe:
+        raise RuntimeError(
+            "`claude` CLI not found on PATH — install Claude Code, or set the stage's "
+            "provider to 'openrouter' in config.yaml."
+        )
     cmd = [
-        "claude", "-p", "--model", model, "--output-format", "json",
+        exe, "-p", "--model", model, "--output-format", "json",
         "--tools", "",                 # no filesystem/tool access
         "--setting-sources", "user",   # ignore project/local settings
     ]
@@ -109,6 +145,7 @@ def _call_claude(model: str, prompt: str, system: str | None) -> str:
         proc = subprocess.run(
             cmd, input=prompt, text=True, capture_output=True,
             timeout=_CLAUDE_TIMEOUT_SEC, cwd=tempfile.gettempdir(),
+            env=_claude_env(),
         )
     except FileNotFoundError as e:
         raise RuntimeError(

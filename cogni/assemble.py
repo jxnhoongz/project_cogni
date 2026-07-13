@@ -28,10 +28,19 @@ _MUSIC_EXTS = (".mp3", ".wav", ".m4a", ".aac", ".ogg", ".flac")
 
 
 def _venc(cfg: dict[str, Any]) -> list[str]:
-    """ffmpeg video-encoder args — Apple hardware (videotoolbox) or software (x264)."""
+    """ffmpeg video-encoder args, chosen by config.yaml video.encoder.
+
+    videotoolbox = Apple Silicon hardware (macOS); nvenc = NVIDIA hardware
+    (Windows/Linux with an NVIDIA GPU); anything else (e.g. "x264") = software
+    libx264, which is portable and always available.
+    """
     v = cfg["video"]
-    if v.get("encoder", "videotoolbox") == "videotoolbox":
-        return ["-c:v", "h264_videotoolbox", "-b:v", str(v.get("video_bitrate", "12M")),
+    encoder = v.get("encoder", "x264")
+    bitrate = str(v.get("video_bitrate", "12M"))
+    if encoder == "videotoolbox":
+        return ["-c:v", "h264_videotoolbox", "-b:v", bitrate, "-pix_fmt", "yuv420p"]
+    if encoder == "nvenc":
+        return ["-c:v", "h264_nvenc", "-preset", "p5", "-rc", "vbr", "-b:v", bitrate,
                 "-pix_fmt", "yuv420p"]
     return ["-c:v", "libx264", "-preset", "medium", "-pix_fmt", "yuv420p"]
 

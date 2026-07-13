@@ -19,6 +19,7 @@ import httpx
 from PIL import Image, ImageDraw, ImageFont
 
 from .config import load_config, load_style_token, project_root, require_env, resolve_path
+from .review import review_gate
 
 
 def _canvas_size(cfg: dict[str, Any]) -> tuple[int, int]:
@@ -92,8 +93,15 @@ def generate_image(prompt: str, out_path: Path, cfg: dict[str, Any], label: str 
         )
 
 
-def images(*, force: bool = False, cfg: dict[str, Any] | None = None) -> Path:
-    """Generate a still for every scene in scenes.json (cached). Returns images dir."""
+def images(
+    *, force: bool = False, skip_review: bool = False, cfg: dict[str, Any] | None = None
+) -> Path:
+    """Generate a still for every scene in scenes.json (cached). Returns images dir.
+
+    Uses each scene's start_image_prompt (the `visuals` keyframe), falling back to
+    the older image_prompt. If any scene has visual prompts, the `review` gate must
+    pass first (override with skip_review) — the safety net before spending credits.
+    """
     cfg = cfg or load_config()
     scenes_path = resolve_path(cfg, "scenes")
     if not scenes_path.exists():
@@ -104,6 +112,20 @@ def images(*, force: bool = False, cfg: dict[str, Any] | None = None) -> Path:
     scenes = doc.get("scenes", [])
     if not scenes:
         raise RuntimeError(f"{scenes_path} has no scenes.")
+
+    if not skip_review:
+        unreviewed, failing = review_gate(scenes)
+        if unreviewed or failing:
+            parts = []
+            if unreviewed:
+                parts.append(f"not reviewed yet: {unreviewed} (run `review`)")
+            if failing:
+                parts.append(f"failing review: {failing} (fix prompts or re-run `visuals`)")
+            raise RuntimeError(
+                "review gate — refusing to spend image credits. "
+                + "; ".join(parts)
+                + ". Override with --skip-review."
+            )
 
     images_dir = resolve_path(cfg, "images")
     images_dir.mkdir(parents=True, exist_ok=True)
@@ -119,7 +141,12 @@ def images(*, force: bool = False, cfg: dict[str, Any] | None = None) -> Path:
         if out.exists() and not force:
             cached += 1
         else:
-            prompt = f"{s['image_prompt']} {style}".strip()
+            base = (s.get("start_image_prompt") or s.get("image_prompt") or "").strip()
+            if not base:
+                raise RuntimeError(
+                    f"scene {s['id']} has no image prompt — run `script` (and `visuals`)."
+                )
+            prompt = f"{base} {style}".strip()
             generate_image(prompt, out, cfg, label=f"Scene {s['id']}")
             made += 1
         if s.get("image_path") != rel:

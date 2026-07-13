@@ -90,10 +90,16 @@ def script(
                 "id": i,
                 "narration": s["narration"],
                 "on_screen_text": s.get("on_screen_text", ""),
-                "image_prompt": s["image_prompt"],
+                "image_prompt": s["image_prompt"],   # seed still; `visuals` refines below
+                # Filled by the `visuals` stage (two keyframes + a motion prompt):
+                "start_image_prompt": "",
+                "end_image_prompt": "",
+                "video_prompt": "",
+                "review": None,                      # set by the `review` gate
                 "animate": False,
                 "audio_path": None,
                 "image_path": None,
+                "end_image_path": None,              # second keyframe still (animate scenes)
                 "clip_path": None,
                 "duration_sec": None,
             }

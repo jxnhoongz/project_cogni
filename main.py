@@ -30,7 +30,9 @@ from cogni.images import images
 from cogni.ingest import ingest
 from cogni.llm import call_stage
 from cogni.narrate import narrate
+from cogni.review import review
 from cogni.script import script
+from cogni.visuals import visuals
 
 
 def cmd_narrate(args: argparse.Namespace) -> int:
@@ -50,8 +52,18 @@ def cmd_projects(_args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_visuals(args: argparse.Namespace) -> int:
+    visuals(force=args.force)
+    return 0
+
+
+def cmd_review(_args: argparse.Namespace) -> int:
+    summary = review()
+    return 0 if summary["passed"] else 1
+
+
 def cmd_images(args: argparse.Namespace) -> int:
-    images(force=args.force)
+    images(force=args.force, skip_review=args.skip_review)
     return 0
 
 
@@ -177,6 +189,21 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_script.set_defaults(func=cmd_script)
 
+    p_visuals = sub.add_parser(
+        "visuals",
+        help="Write per-scene keyframe + motion prompts (start/end/video) — no credits",
+    )
+    p_visuals.add_argument(
+        "--force", action="store_true", help="Rewrite prompts even if they exist"
+    )
+    p_visuals.set_defaults(func=cmd_visuals)
+
+    p_review = sub.add_parser(
+        "review",
+        help="Validate the visual prompts and gate generation (text-only, no credits)",
+    )
+    p_review.set_defaults(func=cmd_review)
+
     p_narrate = sub.add_parser(
         "narrate", help="TTS the narration to audio/scene_XXX.mp3 (edge-tts)"
     )
@@ -200,6 +227,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_images.add_argument(
         "--force", action="store_true", help="Regenerate existing images"
+    )
+    p_images.add_argument(
+        "--skip-review", action="store_true",
+        help="Bypass the review gate and generate anyway (spends credits)",
     )
     p_images.set_defaults(func=cmd_images)
 

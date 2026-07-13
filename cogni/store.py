@@ -21,6 +21,7 @@ from .audio import _find_audio
 from .config import active_project, load_config, project_root, resolve_path
 
 TABLE_HEADERS = ["ID", "Narration (edit me)", "Animate"]
+VISUALS_HEADERS = ["ID", "Start image prompt", "End image prompt", "Motion (video) prompt"]
 
 
 def load_scenes(cfg: dict[str, Any] | None = None) -> dict[str, Any] | None:
@@ -57,6 +58,78 @@ def save_scene_edits(rows: list[list[Any]], cfg: dict[str, Any] | None = None) -
             s["animate"] = bool(r[2])
     p.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return len(by_id)
+
+
+def visuals_table(cfg: dict[str, Any] | None = None) -> list[list[Any]]:
+    """Rows for the visuals grid: [id, start_image_prompt, end_image_prompt, video_prompt]."""
+    doc = load_scenes(cfg)
+    if not doc:
+        return []
+    return [
+        [
+            s["id"],
+            s.get("start_image_prompt", ""),
+            s.get("end_image_prompt", ""),
+            s.get("video_prompt", ""),
+        ]
+        for s in doc["scenes"]
+    ]
+
+
+def save_visual_edits(rows: list[list[Any]], cfg: dict[str, Any] | None = None) -> int:
+    """Write the start/end/video prompt columns back into scenes.json.
+
+    Editing a prompt invalidates that scene's prior review (it must pass again).
+    """
+    cfg = cfg or load_config()
+    p = resolve_path(cfg, "scenes")
+    if not p.exists():
+        raise FileNotFoundError("no scenes.json yet — generate a script first")
+    doc = json.loads(p.read_text(encoding="utf-8"))
+    by_id = {int(r[0]): r for r in rows if r and r[0] not in (None, "")}
+    for s in doc["scenes"]:
+        r = by_id.get(s["id"])
+        if not r:
+            continue
+        new = (str(r[1]).strip(), str(r[2]).strip(), str(r[3]).strip())
+        old = (
+            s.get("start_image_prompt", ""),
+            s.get("end_image_prompt", ""),
+            s.get("video_prompt", ""),
+        )
+        if new != old:
+            s["start_image_prompt"], s["end_image_prompt"], s["video_prompt"] = new
+            s["review"] = None  # prompts changed — stale review
+    p.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return len(by_id)
+
+
+def review_status_md(cfg: dict[str, Any] | None = None) -> str:
+    """Human-readable review state: pass/fail per scene + the specific issues."""
+    doc = load_scenes(cfg)
+    if not doc:
+        return "_No scenes yet._"
+    scenes = doc["scenes"]
+    have_prompts = [s for s in scenes if (s.get("start_image_prompt") or "").strip()]
+    if not have_prompts:
+        return "_No visual prompts yet — click **Generate visual prompts** first._"
+    reviewed = [s for s in have_prompts if isinstance(s.get("review"), dict)]
+    if not reviewed:
+        return (f"⬜ **Not reviewed.** {len(have_prompts)} scenes have prompts — "
+                f"click **Run review** (free) to check them before generating images.")
+    failing = [s for s in reviewed if not (s.get("review") or {}).get("ok")]
+    lines = []
+    if not failing and len(reviewed) == len(have_prompts):
+        lines.append(f"✅ **All {len(reviewed)} scenes passed** — safe to generate images.")
+    else:
+        n_ok = len(reviewed) - len(failing)
+        lines.append(f"⚠️ **{n_ok}/{len(have_prompts)} OK.** Fix the flagged scenes "
+                     f"(edit prompts → Save → Run review), or generate anyway (skips gate).")
+    for s in failing:
+        issues = (s.get("review") or {}).get("issues", [])
+        bullet = "; ".join(issues) if issues else "needs another look"
+        lines.append(f"- **Scene {s['id']}** — {bullet}")
+    return "\n\n".join(lines)
 
 
 def save_audio(scene_id: int, src_path: str, cfg: dict[str, Any] | None = None) -> Path:
@@ -126,6 +199,7 @@ _PREVIEW_CSS = """
 .cg-badge.on{color:#2e9e4f;border-color:#2e9e4f}
 .cg-badge.off{opacity:.55}
 .cg-badge.anim{color:#c99a2e;border-color:#c99a2e}
+.cg-badge.bad{color:#d1584f;border-color:#d1584f}
 </style>
 """
 
@@ -150,6 +224,13 @@ def preview_html(cfg: dict[str, Any] | None = None) -> str:
         badges = [f'<span class="cg-badge {"on" if has_audio else "off"}">{"🔊 narrated" if has_audio else "⬜ no audio"}</span>']
         if s.get("animate"):
             badges.append('<span class="cg-badge anim">🎬 animate</span>')
+        r = s.get("review")
+        if isinstance(r, dict):
+            if r.get("ok"):
+                badges.append('<span class="cg-badge on">✓ review</span>')
+            else:
+                n = len(r.get("issues", []))
+                badges.append(f'<span class="cg-badge bad">⚠ {n} issue{"" if n == 1 else "s"}</span>')
         cap = html.escape(s.get("on_screen_text") or "")
         cards.append(
             f'<div class="cg-card">{img}<div class="cg-body">'
