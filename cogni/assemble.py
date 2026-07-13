@@ -141,7 +141,11 @@ def _scene_clip(
         style = ("FontName=DejaVu Sans,FontSize=15,PrimaryColour=&H00FFFFFF,"
                  "OutlineColour=&H90000000,BorderStyle=1,Outline=2,Shadow=0,"
                  "Alignment=2,MarginV=52")
-        vchain += f",subtitles='{subs}':force_style='{style}'"
+        # Escape the path for ffmpeg's subtitles filter: forward slashes and an
+        # escaped drive-letter colon, or Windows paths like C:\... get mis-parsed as
+        # filter options ("Unable to parse 'original_size' ...").
+        subs_arg = str(subs).replace("\\", "/").replace(":", r"\:")
+        vchain += f",subtitles='{subs_arg}':force_style='{style}'"
 
     # Audio input (index 1).
     if audio is not None:
@@ -263,12 +267,15 @@ def assemble(*, force: bool = False, cfg: dict[str, Any] | None = None) -> Path:
         concat = tmp / "concat.mp4"
         _concat(clips, concat, cfg)
 
+        final.parent.mkdir(parents=True, exist_ok=True)
         music = _find_music(cfg)
         if music:
             print(f"[assemble] mixing music: {music.name}")
             _mix_music(concat, music, final, cfg)
         else:
-            concat.replace(final)
+            # shutil.move (not Path.replace/os.rename) — the temp file may be on a
+            # different drive than the project (C:\Temp -> D:\...), which os.rename can't do.
+            shutil.move(str(concat), str(final))
 
     mode = f"PREVIEW ({placeholders} silent placeholder scene(s))" if placeholders else "full (all voiced)"
     print(f"[assemble] wrote {final} — {len(scenes)} scenes, {mode}.")
