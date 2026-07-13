@@ -333,7 +333,8 @@ def preview_html(cfg: dict[str, Any] | None = None) -> str:
 
 
 def scene_images(cfg: dict[str, Any] | None = None) -> list[tuple[str, str]]:
-    """(image_path, caption) for scenes whose image exists — for a UI gallery."""
+    """(image_path, caption) for a UI gallery — the start still per scene, plus the
+    end keyframe for animate scenes, so start→end pairs sit next to each other."""
     cfg = cfg or load_config()
     doc = load_scenes(cfg)
     if not doc:
@@ -341,8 +342,13 @@ def scene_images(cfg: dict[str, Any] | None = None) -> list[tuple[str, str]]:
     root = project_root(cfg)
     out: list[tuple[str, str]] = []
     for s in doc["scenes"]:
+        cap = f" · {s['on_screen_text']}" if s.get("on_screen_text") else ""
         ip = s.get("image_path")
         p = (root / ip) if ip else None
         if p and p.exists():
-            out.append((str(p), f"Scene {s['id']}: {s.get('on_screen_text') or ''}".strip()))
+            out.append((str(p), f"Scene {s['id']} (start){cap}"))
+        ep = s.get("end_image_path")   # second keyframe (animate scenes only)
+        pe = (root / ep) if ep else None
+        if pe and pe.exists():
+            out.append((str(pe), f"Scene {s['id']} (end){cap}"))
     return out
