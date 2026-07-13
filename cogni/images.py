@@ -9,14 +9,16 @@ one place.
 
 from __future__ import annotations
 
+import base64
 import json
 import textwrap
 from pathlib import Path
 from typing import Any
 
+import httpx
 from PIL import Image, ImageDraw, ImageFont
 
-from .config import load_config, load_style_token, resolve_path
+from .config import load_config, load_style_token, require_env, resolve_path
 
 
 def _canvas_size(cfg: dict[str, Any]) -> tuple[int, int]:
@@ -53,17 +55,41 @@ def _mock_image(prompt: str, out_path: Path, size: tuple[int, int], label: str) 
     img.save(out_path, "PNG")
 
 
+def _openrouter_image(prompt: str, out_path: Path, cfg: dict[str, Any]) -> None:
+    """Generate one image via OpenRouter's /images endpoint and write it to disk."""
+    key = require_env("OPENROUTER_API_KEY")
+    img = cfg["image"]
+    base = cfg["llm"]["base_url"].rstrip("/")  # https://openrouter.ai/api/v1
+    body: dict[str, Any] = {"model": img["model"], "prompt": prompt}
+    if img.get("aspect_ratio"):
+        body["aspect_ratio"] = img["aspect_ratio"]
+    try:
+        r = httpx.post(
+            f"{base}/images",
+            headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+            json=body, timeout=float(img.get("timeout_sec", 180)),
+        )
+    except httpx.HTTPError as e:
+        raise RuntimeError(f"OpenRouter image request failed: {e}") from e
+    if r.status_code != 200:
+        raise RuntimeError(f"OpenRouter image gen HTTP {r.status_code}: {r.text[:300]}")
+    data = r.json().get("data")
+    if not data or not data[0].get("b64_json"):
+        raise RuntimeError(f"OpenRouter image gen returned no image: {r.text[:300]}")
+    out_path.write_bytes(base64.b64decode(data[0]["b64_json"]))
+
+
 def generate_image(prompt: str, out_path: Path, cfg: dict[str, Any], label: str = "") -> None:
     """Generate one image for `prompt` at out_path, per config image.provider."""
     provider = cfg["image"]["provider"]
-    size = _canvas_size(cfg)
     if provider == "mock":
-        _mock_image(prompt, out_path, size, label or out_path.stem)
-        return
-    raise RuntimeError(
-        f"image provider '{provider}' is not wired yet — set image.provider to 'mock' "
-        "or implement the real generator in cogni/images.py."
-    )
+        _mock_image(prompt, out_path, _canvas_size(cfg), label or out_path.stem)
+    elif provider == "openrouter":
+        _openrouter_image(prompt, out_path, cfg)
+    else:
+        raise RuntimeError(
+            f"unknown image provider '{provider}' (use 'openrouter' or 'mock')"
+        )
 
 
 def images(*, force: bool = False, cfg: dict[str, Any] | None = None) -> Path:

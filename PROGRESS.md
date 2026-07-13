@@ -30,7 +30,7 @@ Do NOT one-shot — pause after each for me to test.
 | 3 | `ingest` — book.md → title + thesis + 6–12 key ideas → `outline.json` | ✅ |
 | 4 | `script` — outline → scenes (EN first, then spoken Khmer via Gemini) + `recording_script.txt` + `check-audio` | ✅ |
 | — | **[MANUAL]** I edit Khmer + record (deferred to the web UI — will record there) | ⬜ |
-| 5 | `images` — scene → generate_image() → `images/scene_XXX.png` (mock done; real provider pending) | 🟡 mock |
+| 5 | `images` — scene → generate_image() → `images/scene_XXX.png` (OpenRouter gemini-2.5-flash-image + mock fallback) | ✅ |
 | 6 | `assemble` — measure audio, still + Ken Burns (or clip), music, → `output/final.mp4` (1920×1080) | ✅ |
 | 7 | Higgsfield drop-in — flag `animate=true`, generate clip via MCP, drop into `clips/`, re-run assemble | ⬜ |
 | 8 | Gradio UI — thin wrapper over pipeline functions | ✅ |

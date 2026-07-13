@@ -92,3 +92,19 @@ def recording_script_text(cfg: dict[str, Any] | None = None) -> str:
 def scene_ids(cfg: dict[str, Any] | None = None) -> list[int]:
     doc = load_scenes(cfg)
     return [s["id"] for s in doc["scenes"]] if doc else []
+
+
+def scene_images(cfg: dict[str, Any] | None = None) -> list[tuple[str, str]]:
+    """(image_path, caption) for scenes whose image exists — for a UI gallery."""
+    cfg = cfg or load_config()
+    doc = load_scenes(cfg)
+    if not doc:
+        return []
+    root = resolve_path(cfg, "input").parent
+    out: list[tuple[str, str]] = []
+    for s in doc["scenes"]:
+        ip = s.get("image_path")
+        p = (root / ip) if ip else None
+        if p and p.exists():
+            out.append((str(p), f"Scene {s['id']}: {s.get('on_screen_text') or ''}".strip()))
+    return out

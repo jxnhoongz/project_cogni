@@ -66,6 +66,15 @@ def do_save_audio(scene_id, audio_path):
     return f"✅ Saved recording for scene {int(scene_id)}.", _audio_status_md()
 
 
+def do_generate_images():
+    try:
+        images()
+    except Exception as e:
+        return store.scene_images(), f"❌ {e}"
+    imgs = store.scene_images()
+    return imgs, f"✅ {len(imgs)} images ready."
+
+
 def do_generate_video():
     try:
         images()
@@ -111,9 +120,17 @@ with gr.Blocks(title="Project Cogni") as demo:
         rec_status = gr.Markdown()
         audio_md = gr.Markdown(_audio_status_md())
 
-    with gr.Tab("4. Generate video"):
-        gr.Markdown("Generates images (mock until a real provider is wired) and renders `output/final.mp4`. "
-                    "Scenes without a recording use a short silent placeholder.")
+    with gr.Tab("4. Images"):
+        gr.Markdown("Generate a still per scene (cached — only new/changed scenes cost). "
+                    "OpenRouter `gemini-2.5-flash-image`, ~$0.04/image.")
+        img_btn = gr.Button("Generate images", variant="primary")
+        img_status = gr.Markdown()
+        gallery = gr.Gallery(value=store.scene_images(), label="Scene stills",
+                             columns=3, height=560, object_fit="contain")
+
+    with gr.Tab("5. Generate video"):
+        gr.Markdown("Renders `output/final.mp4` from the stills (+ Ken Burns, captions, music) "
+                    "and your recordings. Scenes without a recording use a short silent placeholder.")
         vid_btn = gr.Button("Generate video", variant="primary")
         vid_status = gr.Markdown()
         video = gr.Video(label="final.mp4")
@@ -122,6 +139,7 @@ with gr.Blocks(title="Project Cogni") as demo:
                   outputs=[gen_status, grid, rec_script, scene_pick, audio_md])
     save_btn.click(do_save_edits, inputs=grid, outputs=save_status)
     rec_btn.click(do_save_audio, inputs=[scene_pick, rec], outputs=[rec_status, audio_md])
+    img_btn.click(do_generate_images, inputs=None, outputs=[gallery, img_status])
     vid_btn.click(do_generate_video, inputs=None, outputs=[video, vid_status])
 
 
