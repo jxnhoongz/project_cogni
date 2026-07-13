@@ -56,6 +56,13 @@ def _refresh():
     )
 
 
+def _hold_refresh():
+    """No-op updates for the refresh_outputs slots — used by intermediate progress
+    yields so streaming a status message doesn't recompute/clear the rest. Length
+    must match refresh_outputs (and _refresh's tuple): 9."""
+    return tuple(gr.update() for _ in range(9))
+
+
 def switch_project(slug):
     if slug:
         set_active_project(slug)
@@ -64,15 +71,20 @@ def switch_project(slug):
 
 def do_generate_script(file):
     if not file:
-        return (gr.update(), "⚠️ Upload a book file first.", *_refresh())
-    try:
+        yield (gr.update(), "⚠️ Upload a book file first.", *_hold_refresh())
+        return
+    try:  # surface stage errors in the UI, don't crash the app
+        yield (gr.update(), "⏳ **1/3** Converting the book (document → text)…", *_hold_refresh())
         convert(file, force=True)
+        yield (gr.update(), "⏳ **2/3** Ingesting the key ideas…", *_hold_refresh())
         ingest(force=True)
+        yield (gr.update(), "⏳ **3/3** Writing the verdict script — the long step…", *_hold_refresh())
         script(force=True)
-    except Exception as e:  # surface stage errors in the UI, don't crash the app
-        return (gr.update(), f"❌ {e}", *_refresh())
+    except Exception as e:
+        yield (gr.update(), f"❌ {e}", *_refresh())
+        return
     slug = active_project()
-    return (
+    yield (
         gr.update(choices=list_projects(), value=slug),
         f"✅ Script ready for '{slug}' — {len(store.scene_ids())} scenes. Edit it, then narrate.",
         *_refresh(),
@@ -198,12 +210,15 @@ def do_generate_images():
 
 def do_generate_video():
     try:
+        yield None, "⏳ **1/2** Generating images (only new/changed scenes cost)…", gr.update(), gr.update()
         images()
+        yield None, "⏳ **2/2** Rendering the video (Ken Burns, subtitles, music)…", gr.update(), gr.update()
         final = assemble(force=True)
     except Exception as e:
-        return None, f"❌ {e}", store.preview_html(), store.final_video_path()
-    return (str(final), f"✅ Rendered {final.name}. Also shown in Preview.",
-            store.preview_html(), str(final))
+        yield None, f"❌ {e}", store.preview_html(), store.final_video_path()
+        return
+    yield (str(final), f"✅ Rendered {final.name}. Also shown in Preview.",
+           store.preview_html(), str(final))
 
 
 def do_refresh_preview():
