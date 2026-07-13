@@ -46,13 +46,14 @@ script:
   khmer_examples: "khmer_style_examples.txt"
 
 # --- Image generation --------------------------------------------------------
-# provider "mock" writes a placeholder PNG (wired in Stage 5); swap to a real
-# provider later. env_key names the .env variable holding the provider's key.
+# provider "openrouter" -> OpenRouter /images (uses OPENROUTER_API_KEY, ~$0.04/image
+# on gemini-2.5-flash-image, ~$0.50 for a 13-scene video; images cache so re-runs
+# are free). provider "mock" -> free placeholder PNGs for testing.
 image:
-  provider: "mock"
-  model: "dall-e-3"
-  size: "1792x1024"          # 16:9
-  env_key: "IMAGE_PROVIDER_API_KEY"
+  provider: "openrouter"
+  model: "google/gemini-2.5-flash-image"
+  aspect_ratio: "16:9"
+  timeout_sec: 180
 
 # --- Video assembly ----------------------------------------------------------
 video:
