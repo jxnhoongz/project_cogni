@@ -17,6 +17,19 @@ output/*
 data/videos/*
 !data/videos/.gitkeep
 
+# Pipeline working files (generated / user content — book text may be copyrighted)
+input/*
+!input/.gitkeep
+audio/*
+!audio/.gitkeep
+images/*
+!images/.gitkeep
+clips/*
+!clips/.gitkeep
+/scenes.json
+/outline.json
+/recording_script.txt
+
 # Python
 __pycache__/
 *.pyc
