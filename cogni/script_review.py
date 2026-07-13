@@ -133,10 +133,14 @@ def _validate_review(data: dict[str, Any], ids: set[int]) -> dict[int, dict[str,
     return out
 
 
-def script_review(*, cfg: dict[str, Any] | None = None) -> dict[str, Any]:
-    """Critique every scene's narration; write narration_review back into scenes.json.
+def script_review(*, force: bool = False, cfg: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Critique the narration; write narration_review back into scenes.json.
 
-    Returns {"n_ok": int, "n_scenes": int, "flagged": [ids]}.
+    Converges: only scenes that haven't been reviewed yet (narration_review is None —
+    fresh scripts, revised scenes, or ones you edited) are (re)judged; scenes you've
+    already accepted keep their verdict, so re-running doesn't whack-a-mole. Pass
+    force=True to re-review every scene. The model always sees the full script for
+    context. Returns {"n_ok", "n_scenes", "flagged", "checked"}.
     """
     cfg = cfg or load_config()
     scenes_path = resolve_path(cfg, "scenes")
@@ -147,35 +151,40 @@ def script_review(*, cfg: dict[str, Any] | None = None) -> dict[str, Any]:
     if not scenes:
         raise RuntimeError(f"{scenes_path} has no scenes.")
 
-    print(f"[script-review] reviewing narration for {len(scenes)} scenes (no credits) ...")
-    data = call_stage(
-        cfg, "script_review", _review_prompt(scenes),
-        system=_REVIEW_SYSTEM, json_out=True,
-    )
-    by_id = _validate_review(data, {int(s["id"]) for s in scenes})
+    targets = scenes if force else [
+        s for s in scenes if not isinstance(s.get("narration_review"), dict)
+    ]
+    checked = [s["id"] for s in targets]
+    if targets:
+        print(f"[script-review] reviewing {len(targets)} scene(s) {checked} (no credits) ...")
+        data = call_stage(
+            cfg, "script_review", _review_prompt(scenes),   # full script for context
+            system=_REVIEW_SYSTEM, json_out=True,
+        )
+        by_id = _validate_review(data, {int(s["id"]) for s in scenes})
+        for s in targets:                                    # apply only to the targets
+            s["narration_review"] = by_id[int(s["id"])]
+        scenes_path.write_text(
+            json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
+    else:
+        print("[script-review] nothing new to review — every scene already judged "
+              "(revise or edit a scene to re-check it, or use force to redo all).")
 
-    flagged = []
-    for s in scenes:
-        r = by_id[int(s["id"])]
-        s["narration_review"] = r
-        if not r["ok"]:
-            flagged.append(s["id"])
-
-    scenes_path.write_text(
-        json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-    )
-    n_ok = len(scenes) - len(flagged)
+    flagged = [s["id"] for s in scenes
+               if isinstance(s.get("narration_review"), dict) and not s["narration_review"]["ok"]]
+    n_ok = sum(1 for s in scenes if isinstance(s.get("narration_review"), dict) and s["narration_review"]["ok"])
     if flagged:
-        print(f"[script-review] {n_ok}/{len(scenes)} scenes strong. Flagged {flagged}:")
+        print(f"[script-review] {n_ok}/{len(scenes)} strong. Flagged {flagged}:")
         for s in scenes:
             r = s.get("narration_review") or {}
-            if not r.get("ok"):
+            if isinstance(s.get("narration_review"), dict) and not r.get("ok"):
                 for issue in r.get("issues", []):
                     print(f"  scene {s['id']:>2}: {issue}")
         print("[script-review] fix with `revise` (rewrites flagged scenes) or edit by hand.")
     else:
         print(f"[script-review] all {len(scenes)} scenes read strong.")
-    return {"n_ok": n_ok, "n_scenes": len(scenes), "flagged": flagged}
+    return {"n_ok": n_ok, "n_scenes": len(scenes), "flagged": flagged, "checked": checked}
 
 
 def revise_narration(

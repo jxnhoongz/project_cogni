@@ -54,7 +54,12 @@ def save_scene_edits(rows: list[list[Any]], cfg: dict[str, Any] | None = None) -
     for s in doc["scenes"]:
         r = by_id.get(s["id"])
         if r:
-            s["narration"] = str(r[1]).strip()
+            new_narration = str(r[1]).strip()
+            if new_narration != (s.get("narration") or ""):
+                # narration changed by hand — its reviews are stale, re-check next time
+                s["narration_review"] = None
+                s["fact_review"] = None
+            s["narration"] = new_narration
             s["animate"] = bool(r[2])
     p.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return len(by_id)
@@ -141,14 +146,17 @@ def narration_review_md(cfg: dict[str, Any] | None = None) -> str:
     reviewed = [s for s in scenes if isinstance(s.get("narration_review"), dict)]
     if not reviewed:
         return "_Narration not reviewed yet — click **Review narration** (free)._"
+    pending = [s for s in scenes if not isinstance(s.get("narration_review"), dict)]
     flagged = [s for s in reviewed if not (s.get("narration_review") or {}).get("ok")]
     lines = []
     if not flagged:
-        lines.append(f"✅ **All {len(reviewed)} scenes read strong.**")
+        lines.append(f"✅ **{len(reviewed)} reviewed, all read strong.**")
     else:
         n_ok = len(reviewed) - len(flagged)
-        lines.append(f"⚠️ **{n_ok}/{len(scenes)} strong.** Revise the flagged scenes "
-                     "(or edit by hand), then re-review.")
+        lines.append(f"⚠️ **{n_ok}/{len(reviewed)} reviewed are strong.** Revise the flagged "
+                     "scenes (or edit by hand); only changed scenes get re-checked.")
+    if pending:
+        lines.append(f"↻ {len(pending)} scene(s) changed — click **Review narration** to re-check them.")
     for s in flagged:
         issues = (s.get("narration_review") or {}).get("issues", [])
         bullet = "; ".join(issues) if issues else "needs a sharper pass"
@@ -165,14 +173,18 @@ def fact_review_md(cfg: dict[str, Any] | None = None) -> str:
     reviewed = [s for s in scenes if isinstance(s.get("fact_review"), dict)]
     if not reviewed:
         return "_Not fact-checked yet — click **Fact-check vs book** (free)._"
+    pending = [s for s in scenes if not isinstance(s.get("fact_review"), dict)]
     flagged = [s for s in reviewed if not (s.get("fact_review") or {}).get("ok")]
     lines = []
     if not flagged:
-        lines.append(f"✅ **All {len(reviewed)} scenes grounded in the book.**")
+        lines.append(f"✅ **{len(reviewed)} checked, all grounded in the book.**")
     else:
         n_ok = len(reviewed) - len(flagged)
-        lines.append(f"⚠️ **{n_ok}/{len(scenes)} grounded.** Fix the flagged scenes "
-                     "(**Revise** grounds the rewrite in the book), then re-check.")
+        lines.append(f"⚠️ **{n_ok}/{len(reviewed)} checked are grounded.** Fix the flagged "
+                     "scenes (**Revise** grounds the rewrite in the book); only changed "
+                     "scenes get re-checked.")
+    if pending:
+        lines.append(f"↻ {len(pending)} scene(s) changed — click **Fact-check vs book** to re-check them.")
     for s in flagged:
         issues = (s.get("fact_review") or {}).get("issues", [])
         bullet = "; ".join(issues) if issues else "possible grounding issue"
