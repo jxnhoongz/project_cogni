@@ -136,9 +136,9 @@ def images(
     made = cached = 0
     changed = False
     for s in scenes:
-        out = images_dir / f"scene_{s['id']:03d}.png"
-        rel = str(out.relative_to(root_parent))
-        if out.exists() and not force:
+        # Start keyframe — every scene gets one.
+        start_out = images_dir / f"scene_{s['id']:03d}.png"
+        if start_out.exists() and not force:
             cached += 1
         else:
             base = (s.get("start_image_prompt") or s.get("image_prompt") or "").strip()
@@ -146,11 +146,32 @@ def images(
                 raise RuntimeError(
                     f"scene {s['id']} has no image prompt — run `script` (and `visuals`)."
                 )
-            prompt = f"{base} {style}".strip()
-            generate_image(prompt, out, cfg, label=f"Scene {s['id']}")
+            generate_image(f"{base} {style}".strip(), start_out, cfg, label=f"Scene {s['id']}")
             made += 1
-        if s.get("image_path") != rel:
-            s["image_path"] = rel
+        start_rel = str(start_out.relative_to(root_parent))
+        if s.get("image_path") != start_rel:
+            s["image_path"] = start_rel
+            changed = True
+
+        # End keyframe — only for scenes flagged animate=true (the second frame of
+        # the start->end hero clip). Non-animate scenes stay single stills.
+        if s.get("animate") and (s.get("end_image_prompt") or "").strip():
+            end_out = images_dir / f"scene_{s['id']:03d}_end.png"
+            if end_out.exists() and not force:
+                cached += 1
+            else:
+                generate_image(
+                    f"{s['end_image_prompt'].strip()} {style}".strip(),
+                    end_out, cfg, label=f"Scene {s['id']} (end)",
+                )
+                made += 1
+            end_rel = str(end_out.relative_to(root_parent))
+            if s.get("end_image_path") != end_rel:
+                s["end_image_path"] = end_rel
+                changed = True
+        elif s.get("end_image_path") is not None:
+            # No longer animating (or no end prompt) — drop the stale end reference.
+            s["end_image_path"] = None
             changed = True
 
     if changed:

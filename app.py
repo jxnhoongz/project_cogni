@@ -86,6 +86,19 @@ def do_save_edits(df):
     return f"✅ Saved edits for {n} scenes. Re-run narration to update the audio.", store.preview_html()
 
 
+def do_animate_all(flag):
+    try:
+        n = store.set_animate_all(flag)
+    except Exception as e:
+        return store.scenes_table(), f"❌ {e}", store.preview_html()
+    verb = "Flagged all" if flag else "Cleared animate on"
+    return (
+        store.scenes_table(),
+        f"✅ {verb} {n} scenes. Run **Images** to make the end keyframes, then animate.",
+        store.preview_html(),
+    )
+
+
 def do_generate_visuals():
     try:
         visuals(force=True)
@@ -204,7 +217,10 @@ with gr.Blocks(title="Project Cogni") as demo:
             interactive=True, wrap=True,
             column_widths=["6%", "82%", "12%"],
         )
-        save_btn = gr.Button("Save edits", variant="primary")
+        with gr.Row():
+            save_btn = gr.Button("Save edits", variant="primary")
+            anim_all_btn = gr.Button("Animate all scenes")
+            anim_none_btn = gr.Button("Clear animate")
         save_status = gr.Markdown()
 
     with gr.Tab("3. Visuals + Review"):
@@ -243,9 +259,10 @@ with gr.Blocks(title="Project Cogni") as demo:
             rec_status = gr.Markdown()
 
     with gr.Tab("5. Images"):
-        gr.Markdown("Generate a still per scene from the **start** keyframe prompt (cached "
-                    "— only new/changed scenes cost). Blocked until **review** passes. "
-                    "OpenRouter `gemini-2.5-flash-image`, ~$0.04/image.")
+        gr.Markdown("Generate the **start** still per scene — plus an **end** keyframe for "
+                    "any scene flagged *animate* (the two frames of its start→end clip). "
+                    "Cached; blocked until **review** passes. OpenRouter "
+                    "`gemini-2.5-flash-image`, ~$0.04/image.")
         img_btn = gr.Button("Generate images", variant="primary")
         img_status = gr.Markdown()
         gallery = gr.Gallery(value=store.scene_images(), label="Scene stills",
@@ -262,6 +279,8 @@ with gr.Blocks(title="Project Cogni") as demo:
     book_dd.change(switch_project, inputs=book_dd, outputs=refresh_outputs)
     gen_btn.click(do_generate_script, inputs=book, outputs=[book_dd, gen_status, *refresh_outputs])
     save_btn.click(do_save_edits, inputs=grid, outputs=[save_status, prev_html])
+    anim_all_btn.click(lambda: do_animate_all(True), inputs=None, outputs=[grid, save_status, prev_html])
+    anim_none_btn.click(lambda: do_animate_all(False), inputs=None, outputs=[grid, save_status, prev_html])
     vis_btn.click(do_generate_visuals, inputs=None, outputs=[vis_grid, vis_status, review_md, prev_html])
     vis_save_btn.click(do_save_visual_edits, inputs=vis_grid, outputs=[vis_status, review_md, prev_html])
     review_btn.click(do_run_review, inputs=None, outputs=[vis_status, review_md, prev_html])

@@ -29,7 +29,9 @@ def _load(cfg: dict[str, Any]) -> dict[str, Any]:
 
 
 def animate_plan(cfg: dict[str, Any] | None = None) -> list[dict[str, Any]]:
-    """Scenes flagged animate=true: their still, target clip path, and status."""
+    """Scenes flagged animate=true: their two keyframes, motion prompt, target clip
+    path, and status. The cogni-animate skill feeds start_image + end_image + the
+    video_prompt to Higgsfield (Seedance start->end) to produce the hero clip."""
     cfg = cfg or load_config()
     doc = _load(cfg)
     images_dir = resolve_path(cfg, "images")
@@ -38,16 +40,20 @@ def animate_plan(cfg: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     for s in doc["scenes"]:
         if not s.get("animate"):
             continue
-        img = images_dir / f"scene_{s['id']:03d}.png"
+        start = images_dir / f"scene_{s['id']:03d}.png"
+        end = images_dir / f"scene_{s['id']:03d}_end.png"
         clip = clips_dir / f"scene_{s['id']:03d}.mp4"
         plan.append(
             {
                 "id": s["id"],
-                "image": str(img) if img.exists() else None,
+                "start_image": str(start) if start.exists() else None,
+                "end_image": str(end) if end.exists() else None,
                 "clip": str(clip),
                 "has_clip": clip.exists(),
                 "narration": s.get("narration") or s.get("narration_en", ""),
-                "image_prompt": s.get("image_prompt", ""),
+                "video_prompt": s.get("video_prompt", ""),
+                "start_image_prompt": s.get("start_image_prompt", ""),
+                "end_image_prompt": s.get("end_image_prompt", ""),
             }
         )
     return plan

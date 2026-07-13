@@ -1,14 +1,19 @@
 ---
 name: cogni-animate
-description: Turn Project Cogni's animate-flagged scene stills into Higgsfield hero clips and re-assemble the video. Use when the user wants to animate scenes, add motion / hero clips, or run the Higgsfield step for the active book. Requires the Higgsfield MCP connected (see the `higgsfield` skill).
+description: Turn Project Cogni's animate-flagged scenes into Higgsfield start->end hero clips and re-assemble the video. Use when the user wants to animate scenes, add motion / hero clips, or run the Higgsfield step for the active book. Requires the Higgsfield MCP connected (see the `higgsfield` skill).
 ---
 
-# Cogni — animate hero scenes with Higgsfield
+# Cogni — animate scenes with Higgsfield (start → end)
 
-Only scenes the user flagged **animate=true** become moving hero clips (image→video);
-every other scene stays a Ken Burns still. This keeps credit cost low. The generated
+Each scene flagged **animate=true** becomes a moving hero clip built from its **two
+keyframes** — `scene_XXX.png` (start) and `scene_XXX_end.png` (end) — interpolated
+by Higgsfield **Seedance 2.0** with the scene's `video_prompt` as the motion. The
 clip drops into `projects/<book>/clips/scene_XXX.mp4`, and `assemble` uses it (looped
-to the narration length) instead of the still.
+to the narration length) instead of the still. Un-flagged scenes stay Ken Burns stills.
+
+The project leans toward animating **every** scene, but cost scales with the number
+of clips — so **start small when testing** (one scene), confirm it looks right, then
+scale up.
 
 ## Prerequisites
 
@@ -16,53 +21,64 @@ to the narration length) instead of the still.
   `claude mcp add … https://mcp.higgsfield.ai/mcp` + `/mcp` setup). It bills the user's
   **subscription credits**.
 - Run **`select_workspace`** once at the start of the session (generation fails silently otherwise).
-- The active book already has `script` + `images` done (the stills must exist).
+- The active book has `script` → `visuals` → `review` → `images` done, so each animate
+  scene has BOTH `images/scene_XXX.png` and `images/scene_XXX_end.png`.
+
+Use the venv Python: `.venv\Scripts\python.exe` on Windows, `.venv/bin/python` on macOS/Linux.
 
 ## Steps
 
-1. **See what's flagged** (from the repo root, using the venv python):
+1. **See what's flagged and ready** (from the repo root):
    ```
-   .venv/bin/python main.py animate
+   .venv\Scripts\python.exe main.py animate
    ```
-   This lists each animate-flagged scene, its still path, and target clip path. Skip
-   scenes that already have a clip (unless the user wants a redo) or have no still.
+   Lists each animate scene with its start/end keyframe status and target clip path.
+   Skip scenes that already have a clip (unless redoing) or whose keyframes are missing
+   (run `images` first).
 
-2. **ALWAYS quote credit cost first** (non-negotiable — from the `higgsfield` skill's
-   cost table). Default model **`seedance_1_5`** at **720p, 4s ≈ ~2.4 credits/clip**
-   (`kling_3_0` for higher quality). Multiply by the number of clips, show `balance`
-   before/after, and **wait for explicit "go".**
+2. **Preflight the exact cost, then quote it — non-negotiable.** Call `generate_video`
+   with `get_cost: true` (same params as the real call below) to get the credit cost
+   for ONE clip without submitting. Multiply by the number of scenes to animate, show
+   `balance` before, and **wait for the user's explicit "go".** For a first test, do a
+   single scene.
 
-3. **For each flagged scene** (its still is `projects/<book>/images/scene_XXX.png`):
-   1. Upload the still — `media_upload` → `curl -X PUT` the bytes → `media_confirm` → `media_id`.
-   2. `generate_video`:
-      - `model`: `seedance_1_5` (or `kling_3_0`)
-      - `medias`: `[{ "value": <media_id>, "role": "start_image" }]`  (Kling/Seedance use `start_image`)
-      - **`duration`: 4** (explicit! Seedance 1.5 defaults to 12s = 3× cost)
-      - resolution 720p+ (assemble upscales to 1080p; 720p is the value sweet spot)
-      - prompt: **subtle, slow, cinematic motion that preserves the Risograph still** —
-        gentle parallax / drift, the scene quietly coming alive, calm and contemplative,
-        NO camera shake, NO new characters or faces. Derive the subject from the scene's
-        `image_prompt`.
-   3. Poll `job_status({ job_id, sync: true })` until done; take **`rawUrl`**.
-   4. Save it into the pipeline:
+3. **For each flagged scene** — upload both keyframes, then interpolate:
+   1. Upload the **start** still (`images/scene_XXX.png`): `media_upload` →
+      `curl -X PUT` the bytes → `media_confirm` → `start_media_id`.
+   2. Upload the **end** still (`images/scene_XXX_end.png`) the same way → `end_media_id`.
+   3. `generate_video`:
+      - `model`: `seedance_2_0`  (supports start-frame + end-frame interpolation)
+      - `medias`: `[{ "value": <start_media_id>, "role": "start_image" },
+                    { "value": <end_media_id>,   "role": "end_image" }]`
+      - `prompt`: the scene's **`video_prompt`** — subtle, slow, cinematic motion from the
+        start frame to the end frame that preserves the Risograph look; gentle parallax /
+        drift, calm and contemplative, NO camera shake, NO new characters or faces.
+      - `duration`: **4**  (explicit — Seedance defaults higher = more credits)
+      - `params`: `resolution: "720p"`, `mode: "fast"` (the value sweet spot; assemble
+        upscales), `aspect_ratio: "16:9"`, **`generate_audio: false`** (we add our own
+        narration — never pay for or burn in TTS-clashing audio).
+   4. Poll `job_status({ job_id, sync: true })` until done; take **`rawUrl`**.
+   5. Save it into the pipeline:
       ```
-      .venv/bin/python -c "from cogni.animate import save_clip; save_clip(<scene_id>, '<rawUrl>')"
+      .venv\Scripts\python.exe -c "from cogni.animate import save_clip; save_clip(<scene_id>, '<rawUrl>')"
       ```
       (accepts an https URL or a local path; writes `clips/scene_XXX.mp4` and records
       `clip_path` in scenes.json.)
 
-4. **Re-assemble** once all clips are saved:
+4. **Re-assemble** once the clip(s) are saved:
    ```
-   .venv/bin/python main.py assemble --force
+   .venv\Scripts\python.exe main.py assemble --force
    ```
-   The hero scenes now play their clip (looped to the narration length); the rest stay
+   Animated scenes now play their clip (looped to the narration length); the rest stay
    Ken Burns stills.
 
 ## Guardrails
 
-- **Hero scenes only.** Don't offer to animate every scene of a long video — that's the
-  expensive move. A handful of clips per video.
-- **Don't fall back to text→video** if a still upload fails — that loses the visual anchor.
-  Surface the error.
-- If a generation errors mysteriously, suspect **plan-tier gating** or a lapsed subscription
-  (check `/mcp` and `balance`) before debugging the prompt.
+- **Start small / quote first.** Always `get_cost` and get an explicit "go" before
+  spending. When testing, animate ONE scene and review it before scaling to all.
+- **Silent clips.** Always `generate_audio: false` — the video carries our own TTS
+  narration; native audio would clash and cost more.
+- **Two keyframes, no text→video fallback.** If an image upload fails, surface the
+  error — don't fall back to text→video, which loses the visual anchor.
+- If a generation errors mysteriously, suspect **plan-tier gating** or a lapsed
+  subscription (check `/mcp` and `balance`) before debugging the prompt.
