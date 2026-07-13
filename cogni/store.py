@@ -156,6 +156,30 @@ def narration_review_md(cfg: dict[str, Any] | None = None) -> str:
     return "\n\n".join(lines)
 
 
+def fact_review_md(cfg: dict[str, Any] | None = None) -> str:
+    """Human-readable fact-check state: clean vs flagged scenes + the grounding notes."""
+    doc = load_scenes(cfg)
+    if not doc:
+        return "_No scenes yet._"
+    scenes = doc["scenes"]
+    reviewed = [s for s in scenes if isinstance(s.get("fact_review"), dict)]
+    if not reviewed:
+        return "_Not fact-checked yet — click **Fact-check vs book** (free)._"
+    flagged = [s for s in reviewed if not (s.get("fact_review") or {}).get("ok")]
+    lines = []
+    if not flagged:
+        lines.append(f"✅ **All {len(reviewed)} scenes grounded in the book.**")
+    else:
+        n_ok = len(reviewed) - len(flagged)
+        lines.append(f"⚠️ **{n_ok}/{len(scenes)} grounded.** Fix the flagged scenes "
+                     "(**Revise** grounds the rewrite in the book), then re-check.")
+    for s in flagged:
+        issues = (s.get("fact_review") or {}).get("issues", [])
+        bullet = "; ".join(issues) if issues else "possible grounding issue"
+        lines.append(f"- **Scene {s['id']}** — {bullet}")
+    return "\n\n".join(lines)
+
+
 def set_animate_all(flag: bool, cfg: dict[str, Any] | None = None) -> int:
     """Set animate = flag on every scene (the 'animate everything' toggle). Returns count."""
     cfg = cfg or load_config()

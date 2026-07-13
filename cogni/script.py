@@ -55,6 +55,7 @@ def _scene_record(i: int, s: dict[str, Any], chapter: str | None = None) -> dict
         "video_prompt": "",
         "review": None,                       # set by the visuals `review` gate
         "narration_review": None,             # set by `script-review`
+        "fact_review": None,                  # set by `fact-check` (narration vs book.md)
         "animate": False,
         "audio_path": None,
         "image_path": None,
