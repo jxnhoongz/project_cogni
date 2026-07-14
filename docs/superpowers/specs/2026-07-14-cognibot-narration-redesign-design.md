@@ -78,6 +78,9 @@ Three issues surfaced from reviewing `test_high.mp4`:
 - **Both MEDIUM and HIGH spend Higgsfield; LOW is the only free tier.** The dial controls
   *how many* beats get MEDIUM/HIGH — a budget lever. Guidance: most beats LOW, a handful
   MEDIUM, a few HIGH (≈6–12 animated beats in a 30-min video).
+- **Open on HIGH (user rule):** force the cold-open beat (scene 1) to HIGH to hook
+  attention; the tagging agent scores every other beat's mode. This is a hard rule, not a
+  suggestion — the first moments must grab the viewer.
 
 ### D. Assemble (`cogni/assemble.py`)
 
@@ -128,6 +131,13 @@ during the rebuild; `cogni-animate`/`motion.md` updates land with **Phase 3** (m
 - No change to `ingest` / `outline.json`.
 - No change to the image provider or the art STYLE token.
 - No premium TTS provider yet (edge/Brian is enough; pluggable later per existing design).
+
+## Backlog (future, out of phases 1–3)
+
+- **Intro + outro bumpers** (channel branding) — flagged and deferred by the user
+  2026-07-14. Needed before publishing, not yet designed.
+- **Finer beats** (optional) — regenerate scripts at ~1 image per sentence for tighter
+  moment-to-moment cutting (more images, higher cost).
 
 ## Phasing (validate cheap → scale)
 
