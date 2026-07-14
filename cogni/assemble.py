@@ -121,10 +121,15 @@ def _scene_clip(
     inputs: list[str] = []
     clip_path = scene.get("clip_path")
     if clip_path and (project_root(cfg) / clip_path).exists():
-        # Hero clip: scale/crop to frame, trim/loop to duration.
+        # Hero clip: play ONCE, then hold the last frame (tpad clone) for the rest of
+        # the scene — never loop (looping a 4s clip over ~20s caused a visible "pop").
+        # The `-t {duration}` below trims to the exact scene length.
         src = project_root(cfg) / clip_path
-        inputs += ["-stream_loop", "-1", "-i", str(src)]
-        vchain = f"[0:v]scale={w}:{h}:force_original_aspect_ratio=increase,crop={w}:{h},fps={fps},format=yuv420p"
+        inputs += ["-i", str(src)]
+        vchain = (
+            f"[0:v]scale={w}:{h}:force_original_aspect_ratio=increase,crop={w}:{h},fps={fps},"
+            f"tpad=stop_mode=clone:stop_duration={duration:.3f},format=yuv420p"
+        )
     else:
         # Still + Ken Burns zoom.
         img = project_root(cfg) / scene["image_path"]
@@ -260,9 +265,16 @@ def assemble(*, force: bool = False, cfg: dict[str, Any] | None = None) -> Path:
                 else:
                     duration = preview_sec
                     placeholders += 1
+            if audio is not None:                       # persist real narration length
+                s["duration_sec"] = round(duration, 1)
             print(f"[assemble] scene {s['id']:>2}: {duration:5.1f}s "
                   f"{'(voice)' if audio else '(silent placeholder)'}")
             clips.append(_scene_clip(s, duration, audio, tmp, cfg))
+
+        # Write the measured durations back so later planning (beats) can use them.
+        scenes_path.write_text(
+            json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
 
         concat = tmp / "concat.mp4"
         _concat(clips, concat, cfg)
