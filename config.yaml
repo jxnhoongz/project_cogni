@@ -63,7 +63,7 @@ script:
 # en-US-AndrewNeural, en-US-GuyNeural. (openai/elevenlabs can be added later.)
 tts:
   provider: "edge"
-  voice: "en-GB-RyanNeural"
+  voice: "en-US-BrianMultilingualNeural"   # Cognibot — casual, natural
   # Subtitles show a few words at a time (chunked from edge-tts word timings),
   # not a whole sentence. Lower these for shorter on-screen phrases.
   subtitle_max_words: 5
@@ -91,14 +91,14 @@ video:
   # Burned-subtitle look (Risograph theme). Colors are #RRGGBB.
   subtitle:
     font: "Trebuchet MS"     # any installed font; a cleaner face than the old DejaVu
-    font_size: 16
+    font_size: 15
     text_color: "F1EDE4"     # cream
     box_color: "14332E"      # dark teal backing
-    box_alpha: 120           # 0=solid .. 255=invisible (soft bar)
-    border_style: 3          # 3 = opaque box behind text
+    box_alpha: 64            # 0=solid .. 255=invisible; ~75% opaque soft bar
+    border_style: 4          # 4 = soft box hugging the text (not the harsh full-width bar)
     outline: 0
     shadow: 0
-    margin_v: 60             # lift off the bottom edge
+    margin_v: 55             # lift off the bottom edge
   burn_captions: false       # the old on_screen_text label bar (off when subtitles on)
   encoder: "nvenc"           # NVIDIA hardware encoder (this machine: RTX 3060). Also:
                              #   "videotoolbox" = Apple Silicon HW, "x264" = software (portable).
