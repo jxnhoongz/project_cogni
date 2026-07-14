@@ -24,20 +24,25 @@ from .config import load_config, resolve_path
 from .llm import call_stage
 
 _SYSTEM = (
-    "You are a sharp, honest video essayist writing long-form YouTube narration "
-    "to be read aloud by a narrator. You take a real point of view — you never "
-    "just summarize. You return only valid JSON."
+    "You are Cognibot, narrator of a channel that reads books so lazy humans don't "
+    "have to. You speak clear, natural, everyday English — never broken robot-speak "
+    "(that lives only on the channel banner). You are blunt, a little funny, and you "
+    "TEACH: an honest point of view, a verdict, not a summary. You teach a book's ideas "
+    "by telling the story of one relatable person it applies to, and you judge the book "
+    "as you go. You return only valid JSON."
 )
 
 # Shared scene-writing rules, used by the short pass and every chapter pass.
 _SCENE_RULES = (
-    "- narration: what the narrator says in this scene. First person, spoken, natural "
-    "to hear aloud.\n"
+    "- narration: what Cognibot says in this beat. Clear, natural, spoken first person. "
+    "Teach through the character's story and give your honest take on the book; never "
+    "flatly summarize.\n"
     "- on_screen_text: a very short caption for the screen (<= 6 words), or \"\" if none.\n"
-    "- image_prompt: describe ONE still image for this scene — concrete subject and "
-    "composition. IMPORTANT: no realistic human faces or hands; favor landscapes, "
-    "silhouettes, objects, symbolic imagery, or figures seen from behind or far away. "
-    "Do not mention art style (added separately)."
+    "- image_prompt: describe ONE still image for THIS beat — the single concrete moment "
+    "being narrated right now, not the scene's whole idea. IMPORTANT: no realistic human "
+    "faces or hands; favor silhouettes, objects, symbolic imagery, or figures seen from "
+    "behind or far away. When the recurring protagonist appears, describe them as the "
+    "SAME silhouetted figure for continuity. Do not mention art style (added separately)."
 )
 
 
@@ -76,19 +81,25 @@ def _build_prompt(outline: dict[str, Any], angle: str, lo: int, hi: int) -> str:
         f"Thesis: {outline['thesis']}\n\n"
         f"Key ideas:\n{ideas}\n\n"
         f"POINT OF VIEW (follow this closely):\n{angle}\n\n"
-        f"Write the narration for a long-form video as a coherent arc:\n"
-        f"- OPEN (scene 1) with a PROVOCATIVE QUESTION — the real question this book "
-        f"promises to answer, framed so the viewer feels it personally (their money, "
-        f"time, or life), and hint at who benefits from the usual answer. Make them "
-        f"need to know. Do NOT state your verdict or stance yet, and do NOT open with "
-        f"'my honest verdict' or any 'in this video' throat-clearing.\n"
-        f"- Then investigate: cover the genuinely useful ideas; push back honestly on "
-        f"what is weak, vague, or overstated; say who it actually helps.\n"
-        f"- CLOSE with your actual verdict — the stance you earned along the way.\n"
-        f"Do NOT just list the ideas.\n\n"
-        f"Return JSON: {{\"scenes\": [ {{\"narration\": ..., \"on_screen_text\": ..., "
-        f"\"image_prompt\": ...}}, ... ]}} with between {lo} and {hi} scenes.\n"
-        f"Each scene's narration is about 2-5 sentences.\n"
+        f"You are Cognibot. Teach this book by telling the story of ONE relatable person "
+        f"it applies to — a specific everyperson who fits the book's world. Invent them: "
+        f"give them a name, an ordinary life, and a real problem. Teach each key idea "
+        f"through what happens to this character, and JUDGE the book honestly as you go.\n\n"
+        f"Write the narration as a coherent arc:\n"
+        f"- COLD OPEN (scene 1): the character's relatable problem, framed as the real "
+        f"question this book promises to answer, felt personally (their money, time, or "
+        f"life). Do NOT state your verdict yet; no 'in this video' throat-clearing.\n"
+        f"- BODY: the character runs into each key idea. Teach the idea through their "
+        f"story, then step out and give Cognibot's honest take — what the book nails, what "
+        f"it skips or oversells, who it fails.\n"
+        f"- CLOSE: the character's outcome + your earned overall verdict + who it actually "
+        f"helps.\n"
+        f"Never just list the ideas. Keep the character consistent throughout.\n\n"
+        f'Return JSON: {{"character": {{"name": <string>, "description": <one sentence on '
+        f'how they look as a recurring silhouette>}}, "scenes": [ {{"narration": ..., '
+        f'"on_screen_text": ..., "image_prompt": ...}}, ... ]}} with between {lo} and {hi} '
+        f"scenes. Each scene is ONE beat: 1-3 sentences of narration and an image for that "
+        f"single moment.\n"
         f"{_SCENE_RULES}"
     )
 
@@ -96,14 +107,16 @@ def _build_prompt(outline: dict[str, Any], angle: str, lo: int, hi: int) -> str:
 def _generate_short(cfg: dict[str, Any], outline: dict[str, Any], angle: str):
     sc = cfg["script"]
     lo, hi = sc["min_scenes"], sc["max_scenes"]
-    print("[script] short mode — writing narration ...")
+    print("[script] short mode — Cognibot writing the character's story ...")
     data = call_stage(
         cfg, "script", _build_prompt(outline, angle, lo, hi),
         system=_SYSTEM, json_out=True,
     )
     scenes_in = _validate(data)
-    print(f"[script] {len(scenes_in)} scenes drafted.")
-    return [_scene_record(i, s) for i, s in enumerate(scenes_in, 1)], {}
+    character = _validate_character(data)
+    who = character["name"] if character else "(no named character)"
+    print(f"[script] {len(scenes_in)} scenes drafted around {who}.")
+    return [_scene_record(i, s) for i, s in enumerate(scenes_in, 1)], {"character": character}
 
 
 # --- long mode (chaptered) ---------------------------------------------------
@@ -276,3 +289,15 @@ def _validate(data: dict[str, Any]) -> list[dict[str, Any]]:
             }
         )
     return clean
+
+
+def _validate_character(data: dict[str, Any]) -> dict[str, str] | None:
+    """Extract the invented protagonist; tolerate absence (returns None)."""
+    c = data.get("character")
+    if not isinstance(c, dict):
+        return None
+    name = str(c.get("name") or "").strip()
+    desc = str(c.get("description") or "").strip()
+    if not (name and desc):
+        return None
+    return {"name": name, "description": desc}
