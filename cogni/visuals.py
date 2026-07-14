@@ -1,14 +1,16 @@
 """Stage: visuals — scenes.json narration -> per-scene keyframe + motion prompts.
 
 Creative, text-only, ZERO image/clip credits. For each scene the model writes:
-  - start_image_prompt: the opening keyframe still (concrete subject + composition)
-  - end_image_prompt:   a second keyframe — the SAME scene a moment later, a coherent
-                        evolution of the first (light/parallax/one element shifts),
-                        NOT a different picture
-  - video_prompt:       the subtle start->end motion (gentle drift, slow reveal)
+  - start_image_prompt: the opening still (concrete subject + composition)
+  - end_image_prompt:   kept for the schema/UI; the animate step no longer interpolates
+                        to it (see docs/motion.md — near-identical frames froze the clips)
+  - video_prompt:       ONE real, slow camera move (push-in, pan, parallax, ...) that
+                        the animate step applies to the start still — describes only the
+                        move, not what's already in the image
 
-These feed two downstream stages: `images` renders start_image_prompt as the still,
-and (later) the animate step uses the end keyframe + motion prompt for a hero clip.
+These feed downstream stages: `images` renders start_image_prompt as the still, and the
+animate step (cogni-animate skill) drives a Seedance clip from that single still using
+video_prompt. See docs/motion.md for the camera-move vocabulary.
 The art STYLE token is appended at image-generation time, so prompts stay
 style-agnostic here (subject/composition only), exactly like `script`'s seed prompt.
 
@@ -54,9 +56,14 @@ def _build_prompt(scenes: list[dict[str, Any]], title: str, thesis: str) -> str:
         f"subject with ONE subtle change (light shifts, a slow drift, one element moves). "
         f"It must read as the end frame of a gentle motion from start_image_prompt, NOT a "
         f"new or unrelated image. Same constraints (no faces/hands, no style).\n"
-        f"- video_prompt: the subtle, slow, cinematic motion from the start frame to the "
-        f"end frame — gentle parallax or drift, the scene quietly coming alive. Calm and "
-        f"contemplative. NO camera shake, NO new characters or faces."
+        f"- video_prompt: ONE deliberate, slow CAMERA MOVE that serves the narration, named "
+        f"in cinematographer's terms — slow push-in / dolly-in, slow pull-back / dolly-out, "
+        f"pan left or right, tilt up or down, lateral tracking, slow orbit, or parallax. "
+        f"Describe ONLY the camera move (plus at most one thing that shifts, e.g. light "
+        f"warming); do NOT re-describe what is already in the still — that dampens the "
+        f"motion. Calm and slow, never frantic, no new characters or faces. BANNED phrasing "
+        f"(it freezes the model): 'no camera shake', 'static', 'still', 'gentle drift', "
+        f"'barely perceptible', 'remains'. Pick one real move."
     )
 
 
