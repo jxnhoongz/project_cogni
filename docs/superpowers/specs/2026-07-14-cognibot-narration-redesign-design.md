@@ -101,6 +101,28 @@ Three issues surfaced from reviewing `test_high.mp4`:
 - Adapt prompts to the new voice/story (still flag weak narration; still ground claims
   against `book.md`). Mechanics unchanged.
 
+### G. Skills & docs cleanup (prevent agent hallucination)
+
+The `.claude/skills/` set is split between the current pipeline and **pre-pivot relics**
+from the abandoned "cognilab / 认知提升" Chinese-shorts era. The relics reference tooling
+and paths that **do not exist** (DALL·E oil paintings, Whisper captions, `scripts/*.sh`,
+`cognilab/catalog/books.json`, shorts, 7-day-experiment chapters). Because their
+descriptions say things like "use after every script generation," an agent will invoke
+them and run non-existent scripts / wrong styles.
+
+- **Delete (stale, pre-pivot):** `asset-librarian`, `book-catalog-manager`,
+  `copyright-compliance-checker`, `midform-script-generator`, `script-quality-checker`,
+  `video-renderer`. (git history preserves them.)
+- **Update (redesign changes them):**
+  - `cogni-animate` — rewrite for **LOW / MEDIUM / HIGH** modes (MEDIUM/HIGH = Higgsfield,
+    LOW = free ffmpeg); drop the "animate every scene" framing; align with mode tagging
+    and the beat structure.
+  - `docs/motion.md` — add the LOW/MEDIUM/HIGH vocabulary; keep the Seedance/camera guidance.
+- **Keep as-is:** `irpe` (discipline skill), `docs/STYLE.md` (current Risograph STYLE token).
+
+This cleanup lands in **Phase 1** (deletions + a stub note) so no stale skill can misfire
+during the rebuild; `cogni-animate`/`motion.md` updates land with **Phase 3** (modes).
+
 ## Non-goals
 
 - No change to `ingest` / `outline.json`.
