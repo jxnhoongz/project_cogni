@@ -14,6 +14,24 @@ upload manually.
 Re-founded around the own-voice Khmer long-form pipeline. Old TTS / shorts / scale /
 auto-distribution foundation stripped out. Rebuilding the core (see build order).
 
+> NOTE: the build-order/stage detail below still describes the earlier own-voice-Khmer
+> plan and is stale — the pipeline has since pivoted to English TTS verdicts (see
+> `CLAUDE.md`) and grown script-review, fact-check, visuals, review, and animate stages.
+
+## Next phases — motion & animation quality
+The first animated clips barely moved (identical keyframes + stasis words + sub-5s
+clips) and a 4s clip was looped to fill ~20s narration. Fix guidance distilled into
+`docs/motion.md` (cherry-picked from smixs/visual-skills — Seedance + camera vocab).
+Do in order; A1/A2 are free and improve the *current* video with zero credits.
+
+| Phase | What | Cost |
+|---|---|---|
+| **A1** | Persist `duration_sec` in the pipeline (measure narration audio after `narrate` / in `check-audio`) — assembly must know each scene's length | free |
+| **A2** | Kill the loop in `assemble`: a hero clip plays **once**, then holds the last frame with Ken Burns for the remainder (no `-stream_loop`) | free — improves the rendered video, no re-animation |
+| **B** | Rewrite `visuals` per `docs/motion.md`: real camera moves, describe-motion-not-image, **drop the end frame** (single start image), ≥5–6s clips | free (prompts + code) |
+| **B-test** | Re-animate ONE scene with the new prompts + a ≥6s clip; confirm it actually moves | ~50 credits |
+| **C** | Coverage + **beats**: animate chosen scenes (heroes vs full), split long scenes into ~2 concatenated beats; `assemble` concatenates beats in order | credits (≈3.5/sec) |
+
 ## Backbone
 A single `scenes.json` that each stage enriches. Every stage is a standalone function
 + CLI subcommand, independently re-runnable, and cached (re-running reuses files unless
