@@ -131,45 +131,55 @@ def _build_structure_prompt(
         + "\n"
         f"Thesis: {outline['thesis']}\n\nKey ideas:\n{ideas}\n\n"
         f"POINT OF VIEW (follow this closely):\n{angle}\n\n"
-        f"Plan a ~{minutes}-minute long-form video as a CHAPTER OUTLINE that builds ONE "
-        f"honest verdict across the whole runtime — not a summary, not a list. Use "
-        f"between {lo_ch} and {hi_ch} chapters.\n"
-        f"- Chapter 1 is the COLD OPEN: it opens on a provocative question (the real "
-        f"question the book promises to answer, felt personally) — NOT the verdict.\n"
-        f"- Middle chapters investigate: the genuinely useful ideas, and honest pushback "
-        f"on what is weak, vague, or overstated. Each middle chapter takes a distinct "
-        f"angle so they don't repeat each other.\n"
-        f"- The FINAL chapter delivers the earned verdict and who it actually helps.\n\n"
-        f'Return JSON: {{"chapters": [{{"title": ..., "focus": ...}}, ...]}}. '
-        f"title = a short chapter title; focus = 1-2 sentences on what this chapter "
-        f"covers and its role in the arc."
+        f"You are Cognibot, planning a ~{minutes}-minute video that TEACHES this book by "
+        f"following ONE relatable protagonist's story across the whole runtime — judging "
+        f"the book honestly as you go. Not a summary, not a list.\n\n"
+        f"First, invent the protagonist: a specific everyperson who fits the book's world, "
+        f"with a name, an ordinary life, and a real problem the book speaks to.\n"
+        f"Then plan {lo_ch}-{hi_ch} chapters that follow that same person:\n"
+        f"- Chapter 1 is the COLD OPEN: their relatable problem, framed as the real "
+        f"question the book promises to answer (felt personally) — NOT the verdict.\n"
+        f"- Middle chapters each take a distinct idea and put the character through it, with "
+        f"Cognibot's honest take (what it nails, what it skips or oversells). Distinct "
+        f"angles, no repeats.\n"
+        f"- The FINAL chapter delivers the character's outcome + the earned verdict + who it "
+        f"actually helps.\n\n"
+        f'Return JSON: {{"character": {{"name": <string>, "description": <one sentence on '
+        f'how they look as a recurring silhouette>}}, "chapters": [{{"title": ..., '
+        f'"focus": ...}}, ...]}}. title = short chapter title; focus = 1-2 sentences on what '
+        f"this chapter covers and its role in the character's arc."
     )
 
 
 def _build_chapter_prompt(
-    outline: dict[str, Any], angle: str, chapter: dict[str, Any],
-    idx: int, total: int, prior_titles: list[str], lo_sc: int, hi_sc: int,
+    outline: dict[str, Any], angle: str, character: dict[str, str] | None,
+    chapter: dict[str, Any], idx: int, total: int, prior_titles: list[str],
+    lo_sc: int, hi_sc: int,
 ) -> str:
     if idx == 1:
-        role = ("the COLD OPEN — open on a provocative question that makes the viewer "
-                "feel it personally; do NOT state the verdict, no 'in this video' intro")
+        role = ("the COLD OPEN — open on the character's relatable problem as a provocative "
+                "question; do NOT state the verdict, no 'in this video' intro")
     elif idx == total:
-        role = "the FINAL chapter — deliver the earned verdict and who it actually helps"
+        role = "the FINAL chapter — the character's outcome, the earned verdict, and who it helps"
     else:
-        role = "a middle chapter — investigate honestly: useful ideas and fair pushback"
+        role = "a middle chapter — teach one idea through the character and judge the book honestly"
     prior = "; ".join(prior_titles) if prior_titles else "(this is the first chapter)"
+    who = (f"{character['name']} — {character['description']}"
+           if character else "the recurring protagonist")
     return (
         f"Book: {outline['title']}\nThesis: {outline['thesis']}\n\n"
         f"POINT OF VIEW (follow this closely):\n{angle}\n\n"
-        f"You are writing ONE chapter of a long-form video. Chapters already written: "
-        f"{prior}.\n"
+        f"You are Cognibot, writing ONE chapter of a long-form video that follows ONE "
+        f"protagonist: {who}. Keep this SAME person consistent.\n"
+        f"Chapters already written: {prior}.\n"
         f"Now write CHAPTER {idx} of {total}: \"{chapter['title']}\".\n"
         f"Chapter focus: {chapter.get('focus', '')}\n"
         f"Role in the arc: {role}.\n\n"
-        f"Write this chapter as {lo_sc}-{hi_sc} scenes of spoken narration that flow as "
-        f"one continuous stretch — do NOT read the chapter title aloud, do NOT say 'in "
-        f"this chapter', and pick up naturally from what came before. First person, "
-        f"natural to hear aloud; each scene about 3-6 sentences.\n\n"
+        f"Write this chapter as {lo_sc}-{hi_sc} beats that follow the character and flow as "
+        f"one continuous stretch — do NOT read the chapter title aloud, do NOT say 'in this "
+        f"chapter', pick up naturally from what came before. Teach each idea through what "
+        f"happens to the character, and give Cognibot's honest take. Each beat = 1-3 "
+        f"sentences of narration and an image for that single moment.\n\n"
         f"Return JSON: {{\"scenes\": [ {{\"narration\": ..., \"on_screen_text\": ..., "
         f"\"image_prompt\": ...}}, ... ]}}.\n"
         f"{_SCENE_RULES}"
@@ -193,15 +203,17 @@ def _generate_long(cfg: dict[str, Any], outline: dict[str, Any], angle: str):
     lg = cfg["script"].get("long", {})
     lo_ch, hi_ch = lg.get("min_chapters", 5), lg.get("max_chapters", 7)
     lo_sc, hi_sc = lg.get("min_scenes_per_chapter", 10), lg.get("max_scenes_per_chapter", 14)
-    minutes = lg.get("target_minutes", 37)
+    minutes = lg.get("target_minutes", 30)
 
-    print(f"[script] long mode (~{minutes} min) — planning chapters ...")
+    print(f"[script] long mode (~{minutes} min) — Cognibot planning the character's chapters ...")
     struct = call_stage(
         cfg, "script", _build_structure_prompt(outline, angle, lo_ch, hi_ch, minutes),
         system=_SYSTEM, json_out=True,
     )
+    character = _validate_character(struct)
     chapters = _validate_chapters(struct)
-    print(f"[script] {len(chapters)} chapters planned. Writing chapter by chapter ...")
+    who = character["name"] if character else "(no named character)"
+    print(f"[script] {len(chapters)} chapters planned around {who}. Writing chapter by chapter ...")
 
     records: list[tuple[dict[str, Any], str]] = []
     prior: list[str] = []
@@ -209,7 +221,7 @@ def _generate_long(cfg: dict[str, Any], outline: dict[str, Any], angle: str):
     for idx, ch in enumerate(chapters, 1):
         data = call_stage(
             cfg, "script",
-            _build_chapter_prompt(outline, angle, ch, idx, total, prior, lo_sc, hi_sc),
+            _build_chapter_prompt(outline, angle, character, ch, idx, total, prior, lo_sc, hi_sc),
             system=_SYSTEM, json_out=True,
         )
         chap = _validate(data)
@@ -219,7 +231,7 @@ def _generate_long(cfg: dict[str, Any], outline: dict[str, Any], angle: str):
               f"(running total {len(records)})")
 
     scenes = [_scene_record(i, s, chapter=title) for i, (s, title) in enumerate(records, 1)]
-    return scenes, {"chapters": [c["title"] for c in chapters]}
+    return scenes, {"character": character, "chapters": [c["title"] for c in chapters]}
 
 
 # --- entry point -------------------------------------------------------------
