@@ -27,6 +27,30 @@ from .config import load_config, project_root, resolve_path, resolve_shared
 _MUSIC_EXTS = (".mp3", ".wav", ".m4a", ".aac", ".ogg", ".flac")
 
 
+def _ass_color(hex_rgb: str, alpha: int = 0) -> str:
+    """#RRGGBB -> libass &HAABBGGRR (AA: 00=opaque, FF=transparent)."""
+    h = hex_rgb.lstrip("#")
+    r, g, b = h[0:2], h[2:4], h[4:6]
+    return f"&H{alpha:02X}{b}{g}{r}".upper()
+
+
+def _subtitle_style(cfg: dict[str, Any]) -> str:
+    """libass force_style for burned subtitles, from config (Riso palette defaults)."""
+    sub = cfg.get("video", {}).get("subtitle", {}) or {}
+    font = sub.get("font", "Trebuchet MS")
+    size = int(sub.get("font_size", 16))
+    text = _ass_color(str(sub.get("text_color", "F1EDE4")), 0)          # cream, opaque
+    box = _ass_color(str(sub.get("box_color", "14332E")),
+                     int(sub.get("box_alpha", 120)))                    # dark teal, soft
+    border_style = int(sub.get("border_style", 3))                     # 3 = opaque box
+    outline = int(sub.get("outline", 0))
+    shadow = int(sub.get("shadow", 0))
+    margin_v = int(sub.get("margin_v", 60))
+    return (f"FontName={font},FontSize={size},PrimaryColour={text},"
+            f"BackColour={box},BorderStyle={border_style},Outline={outline},"
+            f"Shadow={shadow},Alignment=2,MarginV={margin_v}")
+
+
 def _venc(cfg: dict[str, Any]) -> list[str]:
     """ffmpeg video-encoder args, chosen by config.yaml video.encoder.
 
@@ -143,9 +167,7 @@ def _scene_clip(
         )
 
     if subs is not None:
-        style = ("FontName=DejaVu Sans,FontSize=15,PrimaryColour=&H00FFFFFF,"
-                 "OutlineColour=&H90000000,BorderStyle=1,Outline=2,Shadow=0,"
-                 "Alignment=2,MarginV=52")
+        style = _subtitle_style(cfg)
         # Escape the path for ffmpeg's subtitles filter: forward slashes and an
         # escaped drive-letter colon, or Windows paths like C:\... get mis-parsed as
         # filter options ("Unable to parse 'original_size' ...").

@@ -88,6 +88,17 @@ video:
   music_volume: 0.08         # low background music (0.0-1.0)
   fade_sec: 0.5
   subtitles: true            # burn synced subtitles from the narration (edge-tts timings)
+  # Burned-subtitle look (Risograph theme). Colors are #RRGGBB.
+  subtitle:
+    font: "Trebuchet MS"     # any installed font; a cleaner face than the old DejaVu
+    font_size: 16
+    text_color: "F1EDE4"     # cream
+    box_color: "14332E"      # dark teal backing
+    box_alpha: 120           # 0=solid .. 255=invisible (soft bar)
+    border_style: 3          # 3 = opaque box behind text
+    outline: 0
+    shadow: 0
+    margin_v: 60             # lift off the bottom edge
   burn_captions: false       # the old on_screen_text label bar (off when subtitles on)
   encoder: "nvenc"           # NVIDIA hardware encoder (this machine: RTX 3060). Also:
                              #   "videotoolbox" = Apple Silicon HW, "x264" = software (portable).
