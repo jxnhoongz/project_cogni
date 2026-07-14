@@ -93,6 +93,17 @@ def generate_image(prompt: str, out_path: Path, cfg: dict[str, Any], label: str 
         )
 
 
+def _image_prompt(base: str, character: dict[str, Any] | None, style: str) -> str:
+    """Beat prompt + optional recurring-character clause + STYLE token."""
+    parts = [base.strip()]
+    desc = ((character or {}).get("description") or "").strip()
+    if desc:
+        parts.append(f"Recurring character, only if a person appears in this shot: {desc}.")
+    if style.strip():
+        parts.append(style.strip())
+    return " ".join(p for p in parts if p).strip()
+
+
 def images(
     *, force: bool = False, skip_review: bool = False, cfg: dict[str, Any] | None = None
 ) -> Path:
@@ -112,6 +123,7 @@ def images(
     scenes = doc.get("scenes", [])
     if not scenes:
         raise RuntimeError(f"{scenes_path} has no scenes.")
+    character = doc.get("character")
 
     if not skip_review:
         unreviewed, failing = review_gate(scenes)
@@ -146,7 +158,7 @@ def images(
                 raise RuntimeError(
                     f"scene {s['id']} has no image prompt — run `script` (and `visuals`)."
                 )
-            generate_image(f"{base} {style}".strip(), start_out, cfg, label=f"Scene {s['id']}")
+            generate_image(_image_prompt(base, character, style), start_out, cfg, label=f"Scene {s['id']}")
             made += 1
         start_rel = str(start_out.relative_to(root_parent))
         if s.get("image_path") != start_rel:
