@@ -29,6 +29,7 @@ from cogni.convert import convert
 from cogni.images import images
 from cogni.ingest import ingest
 from cogni.llm import call_stage
+from cogni.modes import modes
 from cogni.narrate import narrate
 from cogni.fact_review import fact_review
 from cogni.review import review
@@ -78,6 +79,11 @@ def cmd_visuals(args: argparse.Namespace) -> int:
 def cmd_review(_args: argparse.Namespace) -> int:
     summary = review()
     return 0 if summary["passed"] else 1
+
+
+def cmd_modes(args: argparse.Namespace) -> int:
+    modes(force=args.force)
+    return 0
 
 
 def cmd_images(args: argparse.Namespace) -> int:
@@ -259,6 +265,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Validate the visual prompts and gate generation (text-only, no credits)",
     )
     p_review.set_defaults(func=cmd_review)
+
+    p_modes = sub.add_parser(
+        "modes",
+        help="Tag each beat LOW/MEDIUM/HIGH motion + write motion prompts (text-only, no credits)",
+    )
+    p_modes.add_argument(
+        "--force", action="store_true", help="Re-tag every scene (default: cached if already tagged)"
+    )
+    p_modes.set_defaults(func=cmd_modes)
 
     p_narrate = sub.add_parser(
         "narrate", help="TTS the narration to audio/scene_XXX.mp3 (edge-tts)"

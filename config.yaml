@@ -30,6 +30,9 @@ llm:
     fact_review:
       provider: "claude"                      # grounding: check narration claims against book.md (contradicts / not-in-book / opinion)
       model: "claude-opus-4-8"                # opus: careful reading of the book vs the script
+    modes:
+      provider: "claude"                      # judgment: which beats earn motion (LOW/MEDIUM/HIGH) + motion prompts
+      model: "claude-opus-4-8"                # opus: careful spend judgment (motion costs Higgsfield credits)
 
 # --- Ingest (book.md -> outline.json) ----------------------------------------
 ingest:
@@ -57,6 +60,12 @@ script:
     what the book genuinely gets right, where it is weak, vague, or overstated,
     and who it actually helps in real life. Warm, specific, a little skeptical.
     Written to be heard: natural spoken narration, first person.
+
+# --- Motion modes (scenes.json -> per-scene mode + video_prompt) -------------
+# Tag each beat LOW (free Ken Burns) / MEDIUM / HIGH; write a motion prompt for the
+# animated ones. Beat 1 (cold open) is always forced HIGH.
+modes:
+  max_animated: 12           # cap on MEDIUM+HIGH beats (each costs Higgsfield credits)
 
 # --- Narration (scenes.json narration -> audio/scene_XXX.mp3) -----------------
 # provider "edge" -> edge-tts (free, no key). Voices e.g. en-GB-RyanNeural,
