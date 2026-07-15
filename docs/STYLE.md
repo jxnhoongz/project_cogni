@@ -14,4 +14,5 @@ halftone texture, slight ink misregistration. Flat simple shapes, minimal
 detail, generous negative space. Contemplative, warm, slightly melancholic
 mood. NO realistic human faces or hands — favor landscapes, silhouettes,
 objects, symbolic imagery, and figures seen from behind or far away.
+NO text, words, letters, numbers, or captions anywhere in the image.
 ```
