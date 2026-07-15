@@ -4,184 +4,158 @@ import {
   Easing,
   OffthreadVideo,
   interpolate,
-  spring,
   staticFile,
   useCurrentFrame,
-  useVideoConfig,
 } from "remotion";
+import { loadFont } from "@remotion/google-fonts/Anton";
+
+const { fontFamily } = loadFont();
 
 // --- Riso palette -----------------------------------------------------------
 const CREAM = "#F1EDE4";
 const TEAL = "#14332E";
 const OCHRE = "#C6902F";
-const FONT =
-  "'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif";
 
-// Number spoken in this segment's narration ("...forty dollars more...").
-const TARGET = 40;
+const TARGET = 40; // "...forty dollars more than he started with"
 
-// Timing (frames @ 30fps, 750-frame / 25s comp).
-// The word "forty dollars" lands ~5.5s into the segment, so the count-up
-// resolves right around there.
-const KW_IN = 25; // keyword springs in ~0.8s
-const KW_FADE_START = 122;
-const KW_FADE_END = 148;
-
-const CARD_IN = 150; // count-up card springs in as the keyword clears
-const COUNT_START = 160; // ~5.3s
-const COUNT_DUR = 36; // 1.2s ramp
-const CARD_FADE_START = 340;
-const CARD_FADE_END = 372;
+// Timing (frames @ 30fps, 750-frame / 25s comp). "forty dollars" lands ~5.7s.
+const KICKER_IN = 100;
+const REVEAL_START = 135; // number masks up into view
+const REVEAL_END = 153;
+const COUNT_START = 140;
+const COUNT_END = 176; // settles ~5.9s
+const RULE_START = 150;
+const RULE_END = 172;
+const FADE_OUT_START = 300;
+const FADE_OUT_END = 338;
 
 export const JuiceDemo: React.FC = () => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
 
-  // --- Kinetic keyword label: springs in, sits ~4s, fades out --------------
-  const kwSpring = spring({
-    frame: frame - KW_IN,
-    fps,
-    config: { damping: 12, mass: 0.6, stiffness: 120 },
-  });
-  const kwScale = interpolate(kwSpring, [0, 1], [0.8, 1]);
-  const kwTranslateY = interpolate(kwSpring, [0, 1], [40, 0]);
-  const kwOpacity = interpolate(
+  const groupOpacity = interpolate(
     frame,
-    [KW_IN, KW_IN + 8, KW_FADE_START, KW_FADE_END],
-    [0, 1, 1, 0],
+    [FADE_OUT_START, FADE_OUT_END],
+    [1, 0],
     { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
   );
 
-  // --- Count-up card --------------------------------------------------------
-  const cardSpring = spring({
-    frame: frame - CARD_IN,
-    fps,
-    config: { damping: 14, mass: 0.7, stiffness: 110 },
+  const kickerOpacity = interpolate(frame, [KICKER_IN, KICKER_IN + 16], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
   });
-  const cardScale = interpolate(cardSpring, [0, 1], [0.85, 1]);
-  const cardTranslateY = interpolate(cardSpring, [0, 1], [34, 0]);
-  const cardOpacity = interpolate(
-    frame,
-    [CARD_IN, CARD_IN + 8, CARD_FADE_START, CARD_FADE_END],
-    [0, 1, 1, 0],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
-  );
+  const kickerY = interpolate(frame, [KICKER_IN, KICKER_IN + 16], [18, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+    easing: Easing.out(Easing.cubic),
+  });
 
-  const rawCount = interpolate(
-    frame,
-    [COUNT_START, COUNT_START + COUNT_DUR],
-    [0, TARGET],
-    {
+  // Number rises up behind a masked baseline (no pop/bounce).
+  const revealY = interpolate(frame, [REVEAL_START, REVEAL_END], [110, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+    easing: Easing.out(Easing.cubic),
+  });
+
+  const count = Math.round(
+    interpolate(frame, [COUNT_START, COUNT_END], [0, TARGET], {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
       easing: Easing.out(Easing.cubic),
-    }
+    })
   );
-  const count = Math.round(rawCount);
+
+  const ruleWidth = interpolate(frame, [RULE_START, RULE_END], [0, 470], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+    easing: Easing.out(Easing.cubic),
+  });
+
+  // The big number, drawn twice for a 2-ink Riso misregistration.
+  const num = (color: string) => (
+    <div
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        display: "flex",
+        alignItems: "flex-start",
+        color,
+        fontFamily,
+        lineHeight: 1,
+        whiteSpace: "nowrap",
+      }}
+    >
+      <span style={{ fontSize: 150, marginTop: 34, marginRight: 6 }}>$</span>
+      <span style={{ fontSize: 300 }}>{count}</span>
+    </div>
+  );
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
-      {/* Background: the real base video */}
       <OffthreadVideo
         src={staticFile("segment.mp4")}
         style={{ width: "100%", height: "100%", objectFit: "cover" }}
       />
 
-      {/* Kinetic keyword (upper-right third) */}
-      <div
-        style={{
-          position: "absolute",
-          top: 110,
-          right: 130,
-          opacity: kwOpacity,
-          transform: `translateY(${kwTranslateY}px) scale(${kwScale})`,
-          transformOrigin: "top right",
-        }}
-      >
+      {/* Editorial graphic in the left negative space — type on the art, no card */}
+      <div style={{ position: "absolute", left: 130, top: 250, opacity: groupOpacity }}>
+        {/* Kicker */}
         <div
           style={{
-            display: "inline-block",
-            backgroundColor: TEAL,
-            color: CREAM,
-            fontFamily: FONT,
-            fontWeight: 800,
-            fontSize: 46,
-            letterSpacing: 4,
+            fontFamily,
+            color: OCHRE,
+            fontSize: 34,
+            letterSpacing: 9,
             textTransform: "uppercase",
-            padding: "16px 30px",
-            borderRadius: 12,
-            borderBottom: `5px solid ${OCHRE}`,
-            boxShadow: "0 14px 40px rgba(0,0,0,0.45)",
+            opacity: kickerOpacity,
+            transform: `translateY(${kickerY}px)`,
+            marginBottom: 14,
           }}
         >
-          New Feeling
+          Not a paycheck
         </div>
+
+        {/* Big count-up, masked reveal, ochre/teal misregistration */}
+        <div style={{ overflow: "hidden", height: 320, width: 620 }}>
+          <div
+            style={{
+              position: "relative",
+              height: 320,
+              transform: `translateY(${revealY}%)`,
+            }}
+          >
+            <div style={{ position: "absolute", left: 7, top: 8 }}>{num(OCHRE)}</div>
+            {num(TEAL)}
+          </div>
+        </div>
+
+        {/* Hairline rule draws on */}
+        <div
+          style={{
+            width: ruleWidth,
+            height: 5,
+            backgroundColor: TEAL,
+            marginTop: 6,
+          }}
+        />
       </div>
 
-      {/* Count-up card (upper-right third, clear of bottom subtitles) */}
-      <div
-        style={{
-          position: "absolute",
-          top: 96,
-          right: 130,
-          opacity: cardOpacity,
-          transform: `translateY(${cardTranslateY}px) scale(${cardScale})`,
-          transformOrigin: "top right",
-        }}
+      {/* Subtle print grain tying the type to the paper texture */}
+      <AbsoluteFill
+        style={{ opacity: 0.07, mixBlendMode: "multiply", pointerEvents: "none" }}
       >
-        <div
-          style={{
-            backgroundColor: "rgba(20,51,46,0.82)",
-            padding: "26px 42px 30px 42px",
-            borderRadius: 20,
-            borderLeft: `8px solid ${OCHRE}`,
-            boxShadow: "0 20px 55px rgba(0,0,0,0.5)",
-            textAlign: "right",
-            backdropFilter: "blur(2px)",
-          }}
-        >
-          <div
-            style={{
-              fontFamily: FONT,
-              fontWeight: 700,
-              fontSize: 26,
-              letterSpacing: 5,
-              textTransform: "uppercase",
-              color: OCHRE,
-              marginBottom: 4,
-            }}
-          >
-            Made this weekend
-          </div>
-          <div
-            style={{
-              fontFamily: FONT,
-              fontWeight: 900,
-              fontSize: 150,
-              lineHeight: 1,
-              color: CREAM,
-              letterSpacing: -2,
-            }}
-          >
-            <span style={{ color: OCHRE, fontSize: 96, verticalAlign: "top" }}>
-              $
-            </span>
-            {count}
-          </div>
-          <div
-            style={{
-              fontFamily: FONT,
-              fontWeight: 600,
-              fontSize: 24,
-              color: CREAM,
-              opacity: 0.85,
-              marginTop: 2,
-            }}
-          >
-            he didn&apos;t clock in for
-          </div>
-        </div>
-      </div>
+        <svg width="100%" height="100%">
+          <filter id="grain">
+            <feTurbulence
+              type="fractalNoise"
+              baseFrequency="0.9"
+              numOctaves="2"
+              stitchTiles="stitch"
+            />
+          </filter>
+          <rect width="100%" height="100%" filter="url(#grain)" />
+        </svg>
+      </AbsoluteFill>
     </AbsoluteFill>
   );
 };
