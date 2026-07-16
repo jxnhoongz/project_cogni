@@ -39,10 +39,10 @@ _SCENE_RULES = (
     "flatly summarize.\n"
     "- on_screen_text: a very short caption for the screen (<= 6 words), or \"\" if none.\n"
     "- image_prompt: describe ONE still image for THIS beat — the single concrete moment "
-    "being narrated right now, not the scene's whole idea. IMPORTANT: no realistic human "
-    "faces or hands; favor silhouettes, objects, symbolic imagery, or figures seen from "
-    "behind or far away. When the recurring protagonist appears, describe them as the "
-    "SAME silhouetted figure for continuity. Do not mention art style (added separately)."
+    "being narrated right now, not the scene's whole idea. When a person appears it is the "
+    "recurring protagonist as a stylized, faceted LOW-POLY figure — a clear low-poly face "
+    "is good, never photorealistic; keep them the SAME person for continuity. Otherwise use "
+    "objects or symbolic imagery. Do not mention art style (added separately)."
 )
 
 
@@ -96,7 +96,7 @@ def _build_prompt(outline: dict[str, Any], angle: str, lo: int, hi: int) -> str:
         f"helps.\n"
         f"Never just list the ideas. Keep the character consistent throughout.\n\n"
         f'Return JSON: {{"character": {{"name": <string>, "description": <one sentence on '
-        f'how they look as a recurring silhouette>}}, "scenes": [ {{"narration": ..., '
+        f'how they look as a recurring low-poly character with a clear face — concrete, non-photorealistic>}}, "scenes": [ {{"narration": ..., '
         f'"on_screen_text": ..., "image_prompt": ...}}, ... ]}} with between {lo} and {hi} '
         f"scenes. Each scene is ONE beat: 1-3 sentences of narration and an image for that "
         f"single moment.\n"
@@ -145,7 +145,7 @@ def _build_structure_prompt(
         f"- The FINAL chapter delivers the character's outcome + the earned verdict + who it "
         f"actually helps.\n\n"
         f'Return JSON: {{"character": {{"name": <string>, "description": <one sentence on '
-        f'how they look as a recurring silhouette>}}, "chapters": [{{"title": ..., '
+        f'how they look as a recurring low-poly character with a clear face — concrete, non-photorealistic>}}, "chapters": [{{"title": ..., '
         f'"focus": ...}}, ...]}}. title = short chapter title; focus = 1-2 sentences on what '
         f"this chapter covers and its role in the character's arc."
     )

@@ -64,8 +64,13 @@ script:
 # --- Motion modes (scenes.json -> per-scene mode + video_prompt) -------------
 # Tag each beat LOW (free Ken Burns) / MEDIUM / HIGH; write a motion prompt for the
 # animated ones. Beat 1 (cold open) is always forced HIGH.
+# NOTE (learned on book #1): each animated clip is ~8s but most beats' narration runs
+# ~12-18s, so the clip plays then FREEZES on its last frame for the remainder — reads
+# as a stall. And low-poly stills with Ken Burns already look alive, so motion adds
+# little for a lot of credits (~36 cr/clip). Keep this small: hook + a few punches.
+# Prefer animating SHORT beats (narration <= ~8s) so the clip covers the whole scene.
 modes:
-  max_animated: 12           # cap on MEDIUM+HIGH beats (each costs Higgsfield credits)
+  max_animated: 4            # cap on MEDIUM+HIGH beats (each costs ~36 Higgsfield credits)
 
 # --- Narration (scenes.json narration -> audio/scene_XXX.mp3) -----------------
 # provider "edge" -> edge-tts (free, no key). Voices e.g. en-GB-RyanNeural,
