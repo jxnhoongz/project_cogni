@@ -34,7 +34,7 @@ export const Intro: React.FC = () => {
           an honest verdict
         </div>
         <div style={{ display: "flex", justifyContent: "center" }}>
-          <Misreg size={72}>THINKING, FAST AND SLOW</Misreg>
+          <Misreg size={82}>THE PSYCHOLOGY OF MONEY</Misreg>
         </div>
       </div>
 

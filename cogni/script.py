@@ -22,6 +22,7 @@ from typing import Any
 
 from .config import load_config, resolve_path
 from .llm import call_stage
+from .pronounce import avoid_clause
 
 _SYSTEM = (
     "You are Cognibot, narrator of a channel that reads books so lazy humans don't "
@@ -42,7 +43,8 @@ _SCENE_RULES = (
     "being narrated right now, not the scene's whole idea. When a person appears it is the "
     "recurring protagonist as a stylized, faceted LOW-POLY figure — a clear low-poly face "
     "is good, never photorealistic; keep them the SAME person for continuity. Otherwise use "
-    "objects or symbolic imagery. Do not mention art style (added separately)."
+    "objects or symbolic imagery. Do not mention art style (added separately).\n"
+    f"- {avoid_clause()}"
 )
 
 

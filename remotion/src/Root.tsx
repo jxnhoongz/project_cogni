@@ -8,13 +8,12 @@ import { JuiceCountup } from "./JuiceCountup";
 import { Thumbnail } from "./Thumbnail";
 
 const CHAPTERS = [
-  "The Gut Call",
-  "Two Brains in One Skull",
-  "The Candidate Who Reminded Him of Himself",
-  "The Alarm System and the Broken Smoke Detector",
-  "Selling the Winner, Holding the Loser",
-  "The Boss, the Checklist, and the Slump That Wasn't a Slump",
-  "The Verdict",
+  "The Guy Who Should Be Fine",
+  "Theo Meets the Boring Number",
+  "Dante's Watch",
+  "The Only Dial That Moves",
+  "The Bet He Almost Made",
+  "What Theo Actually Keeps",
 ];
 
 export const RemotionRoot: React.FC = () => {
@@ -41,7 +40,7 @@ export const RemotionRoot: React.FC = () => {
         fps={30}
         width={1920}
         height={1080}
-        defaultProps={{ value: 2, prefix: "", suffix: "×", kicker: "Losses hurt", sub: "as much as gains feel good" }}
+        defaultProps={{ word: "Enough", kicker: "The whole game is", sub: "a number that's yours" }}
       />
       <Composition id="JuiceDemo" component={JuiceDemo} durationInFrames={750} fps={30} width={1920} height={1080} />
       <Composition id="ThumbA" component={Thumbnail} durationInFrames={1} fps={30} width={1280} height={720}
