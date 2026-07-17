@@ -1,0 +1,118 @@
+"""Import manually-generated images back into the active book.
+
+Takes a folder of numbered files (1.png, 2.png, ... or 1.jpg, 01.png, "1 (1).png" —
+anything whose first number matches) and renames them onto the right scenes using the
+manifest written by scripts/export_prompts.py. Also stamps image_path/end_image_path
+into scenes.json so `assemble` picks them up.
+
+Verifies before it writes: every index present, no duplicates, every file a real image.
+
+Usage:
+  python scripts/import_images.py <folder>            # check + import
+  python scripts/import_images.py <folder> --dry-run  # check only, touch nothing
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import shutil
+import sys
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO))
+
+_EXT = {".png", ".jpg", ".jpeg", ".webp"}
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("folder", help="folder holding your numbered images")
+    ap.add_argument("--dry-run", action="store_true")
+    a = ap.parse_args()
+
+    slug = (REPO / ".active_project").read_text(encoding="utf-8").strip()
+    proj = REPO / "projects" / slug
+    man_path = proj / "manual" / "manifest.json"
+    if not man_path.exists():
+        raise SystemExit(f"no manifest at {man_path} — run scripts/export_prompts.py first.")
+    man = json.loads(man_path.read_text(encoding="utf-8"))
+    if man["slug"] != slug:
+        raise SystemExit(f"manifest is for '{man['slug']}' but active project is '{slug}'.")
+    items = {int(i["index"]): i["target"] for i in man["items"]}
+
+    src = Path(a.folder).expanduser()
+    if not src.is_dir():
+        raise SystemExit(f"not a folder: {src}")
+
+    # map: leading number in the filename -> file
+    found: dict[int, Path] = {}
+    dupes: list[str] = []
+    for f in sorted(src.iterdir()):
+        if f.suffix.lower() not in _EXT:
+            continue
+        m = re.search(r"\d+", f.stem)
+        if not m:
+            continue
+        n = int(m.group())
+        if n in found:
+            dupes.append(f"  #{n}: {found[n].name} AND {f.name}")
+        else:
+            found[n] = f
+
+    missing = sorted(set(items) - set(found))
+    extra = sorted(set(found) - set(items))
+    print(f"[import] {slug}: manifest wants {len(items)} images; folder has {len(found)} numbered files")
+    if dupes:
+        print("[import] DUPLICATE numbers (ambiguous — fix these):"); [print(d) for d in dupes]
+    if missing:
+        print(f"[import] MISSING numbers: {missing}")
+    if extra:
+        print(f"[import] EXTRA numbers (ignored): {extra}")
+    if dupes or missing:
+        raise SystemExit("[import] refusing to import — fix the numbering above first.")
+
+    try:
+        from PIL import Image
+        bad = []
+        for n, f in found.items():
+            if n not in items:
+                continue
+            try:
+                with Image.open(f) as im:
+                    w, h = im.size
+                if abs((w / h) - (16 / 9)) > 0.06:
+                    bad.append(f"  #{n} {f.name}: {w}x{h} is not ~16:9 — assemble will crop it")
+            except Exception as e:
+                bad.append(f"  #{n} {f.name}: not a readable image ({e})")
+        if bad:
+            print("[import] WARNING:"); [print(b) for b in bad]
+    except ImportError:
+        pass
+
+    if a.dry_run:
+        print("[import] dry run OK — numbering checks out, nothing written.")
+        return
+
+    img_dir = proj / "images"
+    img_dir.mkdir(parents=True, exist_ok=True)
+    for n, target in sorted(items.items()):
+        shutil.copyfile(found[n], img_dir / target)
+    print(f"[import] copied {len(items)} images -> {img_dir}")
+
+    scenes_path = proj / "scenes.json"
+    doc = json.loads(scenes_path.read_text(encoding="utf-8"))
+    changed = 0
+    for s in doc["scenes"]:
+        start, end = f"scene_{s['id']:03d}.png", f"scene_{s['id']:03d}_end.png"
+        if (img_dir / start).exists() and s.get("image_path") != f"images\\{start}":
+            s["image_path"] = f"images\\{start}"; changed += 1
+        if (img_dir / end).exists() and s.get("end_image_path") != f"images\\{end}":
+            s["end_image_path"] = f"images\\{end}"; changed += 1
+    scenes_path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(f"[import] stamped {changed} path(s) into scenes.json — ready for `assemble`.")
+
+
+if __name__ == "__main__":
+    main()

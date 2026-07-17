@@ -21,12 +21,33 @@ and `main.py` imports `cogni.animate`→`httpx` at load. The venv has them.)
 | 7 | `review` | free | validate visual prompts, gate generation |
 | 8 | `narrate` | free | → `audio/scene_XXX.mp3` (+ `.srt`) via edge-tts (Brian voice) |
 | — | **CREDIT GATE** | — | `get_cost` preflight, quote the total, WAIT for explicit "go" (cogni-animate skill) |
-| 9 | `images` | ~2–14 cr/img | Higgsfield nano_banana_pro. **Dispatch parallel subagents** (they use the MCP). STYLE.md appended to every prompt |
+| 9 | `images` | see below | Three ways to buy the ~95 stills — pick per budget. STYLE.md is appended to every prompt automatically |
 | 10| `animate` (list) → generate | ~36 cr/clip | Higgsfield seedance_2_0 (standard, NOT fast). Only the ~4 tagged beats. **Dispatch subagents**, 3–4 in parallel per batch (firing all at once → 429) |
 | 11| `assemble --force` | free (nvenc) | → `output/final.mp4` (stills + Ken Burns + clips + narration + subtitles + music). Writes `duration_sec` back |
 | 12| **Remotion per-book** (see below) | free | chapter cards + intro/outro book title + optional count-up, rendered with ALPHA |
 | 13| `scripts/finalize.py` | free (nvenc) | juice overlays + intro/outro in ONE pass → `output/final_full.mp4` ← **the upload file** |
 | 14| thumbnail + `publish.md` | free | Remotion `Thumbnail` still + SEO/description/timestamps |
+
+## Step 9 — the three ways to get the stills
+
+| Route | Cost per book (~95 imgs) | Effort |
+|---|---|---|
+| **OpenRouter** (`config.yaml image.provider: openrouter`, `google/gemini-2.5-flash-image`) — just run `main.py images` | **~$4**, 0 credits | none |
+| **Higgsfield API** — set provider/model to `nano_banana` (1 cr) or `nano_banana_pro` (2 cr) | **~95–190 credits**, $0 | none |
+| **Manual, web app** — free but hand-clicked (below) | **$0 and 0 credits** | ~2–3 hrs |
+
+**Manual route** (when credits/cash are tight and time isn't):
+```
+python scripts/export_prompts.py          # -> projects/<slug>/manual/prompts.txt + manifest.json
+#   higgsfield.ai/ai/image -> Unlimited toggle ON, aspect 16:9, generate each in order,
+#   save as 1.png .. N.png in one folder. KEEP THE NUMBERING.
+python scripts/import_images.py <folder> --dry-run   # verifies numbering, touches nothing
+python scripts/import_images.py <folder>             # renames onto scenes + stamps scenes.json
+```
+`import_images.py` refuses on any missing/duplicate number and warns on non-16:9 — that
+numbering contract is the whole safety net (one re-roll renumbered = every later image on
+the wrong scene). The web "Unlimited" toggle is free but **web-only**: the API rejects
+`use_unlim` and bills credits anyway (verified), which is exactly why this manual path exists.
 
 ## Step 12 — Remotion (the per-book manual bits)
 
