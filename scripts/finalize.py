@@ -27,7 +27,7 @@ OUTRO = REPO / "remotion" / "out" / "outro.mp4"
 OVERLAY_SEC = 4.0
 
 # --- per-book knob: a count-up overlay at one scene (or None to skip) ----------
-COUNTUP_SCENE = 20            # scene id to place Countup.mov on (None = no count-up)
+COUNTUP_SCENE = 52            # scene id to place Countup.mov on (None = no count-up)
 
 
 def active_slug() -> str:

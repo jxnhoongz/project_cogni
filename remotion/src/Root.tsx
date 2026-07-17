@@ -8,13 +8,13 @@ import { JuiceCountup } from "./JuiceCountup";
 import { Thumbnail } from "./Thumbnail";
 
 const CHAPTERS = [
-  "The 6:47 AM Alarm That Always Loses",
-  "1% Isn't Nothing — It's Everything (Eventually)",
-  "Stop Chasing Goals, Start Being Someone",
-  "The Four-Part Machine Behind Every Habit",
-  "Move the Couch, Move the Habit",
-  "Two Minutes, Habit Stacking, and the Trap of Instant Reward",
-  "Six Months Later: What Actually Stuck",
+  "The Gut Call",
+  "Two Brains in One Skull",
+  "The Candidate Who Reminded Him of Himself",
+  "The Alarm System and the Broken Smoke Detector",
+  "Selling the Winner, Holding the Loser",
+  "The Boss, the Checklist, and the Slump That Wasn't a Slump",
+  "The Verdict",
 ];
 
 export const RemotionRoot: React.FC = () => {
@@ -41,15 +41,15 @@ export const RemotionRoot: React.FC = () => {
         fps={30}
         width={1920}
         height={1080}
-        defaultProps={{ value: 37, prefix: "", suffix: "×", kicker: "1% better, every day", sub: "compounded over one year" }}
+        defaultProps={{ value: 2, prefix: "", suffix: "×", kicker: "Losses hurt", sub: "as much as gains feel good" }}
       />
       <Composition id="JuiceDemo" component={JuiceDemo} durationInFrames={750} fps={30} width={1920} height={1080} />
       <Composition id="ThumbA" component={Thumbnail} durationInFrames={1} fps={30} width={1280} height={720}
-        defaultProps={{ bg: "ah_couch.png", line1: "Tiny habits.", line2: "Big promises?", side: "left" as const }} />
+        defaultProps={{ bg: "tf_book.png", line1: "Read the book.", line2: "Still biased.", side: "left" as const }} />
       <Composition id="ThumbB" component={Thumbnail} durationInFrames={1} fps={30} width={1280} height={720}
-        defaultProps={{ bg: "ah_bed.png", line1: "1% better?", line2: "Or just hype?", side: "right" as const }} />
+        defaultProps={{ bg: "tf_gut.png", line1: "Your gut lies.", line2: "Constantly.", side: "left" as const }} />
       <Composition id="ThumbC" component={Thumbnail} durationInFrames={1} fps={30} width={1280} height={720}
-        defaultProps={{ bg: "ah_phone.png", line1: "Read it all.", line2: "Still lazy.", side: "left" as const }} />
+        defaultProps={{ bg: "tf_brain.png", line1: "Know the bias.", line2: "Fall for it anyway.", side: "left" as const }} />
     </>
   );
 };

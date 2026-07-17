@@ -15,6 +15,7 @@ and `main.py` imports `cogni.animate`→`httpx` at load. The venv has them.)
 | 2 | `ingest` | free | → `outline.json` (title, thesis, key ideas) — Claude CLI (subscription) |
 | 3 | `script` | free | → `scenes.json` — invents ONE protagonist, long-mode chapters, verdict woven in |
 | 4 | `script-review` → `revise` → `fact-check` | free | critique + fix weak/ungrounded scenes (optional but cheap) |
+| 4b | `python scripts/check_tics.py` | free | **cross-book tic check.** Flags phrasing reused from earlier books, with scene ids. Rewrite those beats in scenes.json and re-run until it PASSES — *before* narrate, or the tic is baked into audio. Books 1-3 shipped sharing "as an instruction manual", "give the book real credit", "here's my honest take" |
 | 5 | `visuals` | free | per-scene keyframe + start/end/video prompts |
 | 6 | `modes` | free | tag each beat LOW/MEDIUM/HIGH + motion prompt. Cap `max_animated` (config, now **4**). Beat 1 forced HIGH |
 | 7 | `review` | free | validate visual prompts, gate generation |
@@ -61,6 +62,16 @@ explicit "go". ~91 images + 4 clips ≈ a few hundred credits. Check `balance` f
   (coin stacks, not a chart). If a clip garbles, drop it to its (clean) still.
 - **Motion is optional:** low-poly + Ken Burns already reads as alive. Keep animation to the
   hook + a couple of punches; it's the biggest credit cost for the least visible gain.
+- **Don't enumerate verdict moves in a prompt.** Books 1-3 reused the same climax scaffolding
+  because `config.yaml script.angle` (injected into EVERY chapter call as "follow this
+  closely") listed three fixed moves — "what it gets right / where it's overstated / who it
+  helps" — and `script.py` repeated them. The model wasn't being lazy; we ordered those moves
+  twice. Fixed by making the verdict derive from the book's own specifics. **Never re-add a
+  fixed list of verdict beats to the angle or the chapter roles** — and note that a stronger
+  model does NOT fix this: it fills the same template more elegantly.
+- **Fresh protagonist per book:** the writer defaults to "Marcus" (books 1 and 3 both got one).
+  Rename to a distinct name + a visually distinct look. Marcus Webb (stocky/polo/lanyard),
+  Danny Rivera (wiry/hoodie), Ray Delgado (glasses/polo/smirk).
 
 ## Estimated wall-clock (repeat book, pipeline already built)
 

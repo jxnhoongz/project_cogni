@@ -17,7 +17,8 @@ llm:
       model: "claude-haiku-4-5"
     script:
       provider: "claude"                      # English verdict narration (POV, not summary)
-      model: "claude-sonnet-5"                # fast + strong; use claude-opus-4-8 for a slower "polish" pass
+      model: "claude-opus-4-8"                # opus: the script IS the product — worth the slower pass
+                                              # (was sonnet-5 for books 1-3; prose felt templated)
     visuals:
       provider: "claude"                      # creative: two keyframe prompts + a motion prompt per scene
       model: "claude-sonnet-5"
@@ -55,11 +56,18 @@ script:
     max_scenes_per_chapter: 14
   # The narration point of view. This is a VERDICT, not a summary — a stance.
   # Override per book with `--angle "..."`.
+  # NOTE: this text is injected into EVERY chapter call as "POINT OF VIEW (follow this
+  # closely)". Do NOT enumerate a fixed list of verdict moves here — the old wording
+  # ("say what it gets right, where it is overstated, and who it helps") templated every
+  # book's climax and made three videos reuse the same scaffolding. Keep it a stance +
+  # a demand for book-specific concreteness, and let each book's own material decide the
+  # shape of the judgement.
   angle: >-
-    Take a clear, honest point of view — this is a verdict, not a summary. Say
-    what the book genuinely gets right, where it is weak, vague, or overstated,
-    and who it actually helps in real life. Warm, specific, a little skeptical.
-    Written to be heard: natural spoken narration, first person.
+    Take a clear, honest point of view — this is a verdict, not a summary. Every
+    judgement names something concrete and particular to THIS book — a specific
+    claim, example, or piece of evidence — and says what that thing is actually
+    worth. Warm, specific, a little skeptical. Written to be heard: natural
+    spoken narration, first person.
 
 # --- Motion modes (scenes.json -> per-scene mode + video_prompt) -------------
 # Tag each beat LOW (free Ken Burns) / MEDIUM / HIGH; write a motion prompt for the

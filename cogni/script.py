@@ -140,10 +140,12 @@ def _build_structure_prompt(
         f"- Chapter 1 is the COLD OPEN: their relatable problem, framed as the real "
         f"question the book promises to answer (felt personally) — NOT the verdict.\n"
         f"- Middle chapters each take a distinct idea and put the character through it, with "
-        f"Cognibot's honest take (what it nails, what it skips or oversells). Distinct "
+        f"Cognibot's honest take on that specific idea, judged on its own terms. Distinct "
         f"angles, no repeats.\n"
-        f"- The FINAL chapter delivers the character's outcome + the earned verdict + who it "
-        f"actually helps.\n\n"
+        f"- The FINAL chapter delivers the character's outcome, then the earned verdict built "
+        f"out of THIS book's own specifics: the one idea that most survives scrutiny and the "
+        f"one claim that least survives it, both named concretely, with the verdict landing "
+        f"wherever those two leave it.\n\n"
         f'Return JSON: {{"character": {{"name": <string>, "description": <one sentence on '
         f'how they look as a recurring low-poly character with a clear face — concrete, non-photorealistic>}}, "chapters": [{{"title": ..., '
         f'"focus": ...}}, ...]}}. title = short chapter title; focus = 1-2 sentences on what '
@@ -160,7 +162,10 @@ def _build_chapter_prompt(
         role = ("the COLD OPEN — open on the character's relatable problem as a provocative "
                 "question; do NOT state the verdict, no 'in this video' intro")
     elif idx == total:
-        role = "the FINAL chapter — the character's outcome, the earned verdict, and who it helps"
+        role = ("the FINAL chapter — the character's outcome, then the earned verdict built out of "
+                "THIS book's own specifics: the one idea that most survives scrutiny and the one "
+                "claim that least survives it, both named concretely, with the verdict landing "
+                "wherever those two leave it")
     else:
         role = "a middle chapter — teach one idea through the character and judge the book honestly"
     prior = "; ".join(prior_titles) if prior_titles else "(this is the first chapter)"
