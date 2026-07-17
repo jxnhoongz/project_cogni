@@ -80,6 +80,45 @@ def _openrouter_image(prompt: str, out_path: Path, cfg: dict[str, Any]) -> None:
     out_path.write_bytes(base64.b64decode(data[0]["b64_json"]))
 
 
+def _comfy_image(prompt: str, out_path: Path, cfg: dict[str, Any]) -> None:
+    """Generate one image via the local ComfyUI server (SDXL + faceted-low-poly LoRA).
+
+    Free + local. Generates at the model's native res, then Lanczos-upscales to the
+    video canvas (flat low-poly facets upscale cleanly). The style LoRA's trigger word
+    is prepended; the STYLE token is already in `prompt`. Seed is derived from the scene
+    filename so re-runs reproduce.
+    """
+    import hashlib
+    import sys
+
+    c = cfg["image"].get("comfy", {})
+    scripts_dir = str(Path(__file__).resolve().parent.parent / "scripts")
+    if scripts_dir not in sys.path:
+        sys.path.insert(0, scripts_dir)
+    from comfy_gen import generate  # local ComfyUI client
+
+    trigger = c.get("trigger", "ral-polygon")
+    full = prompt if trigger.lower() in prompt.lower() else f"{trigger}, {prompt}"
+    seed = int(hashlib.sha1(out_path.stem.encode()).hexdigest()[:8], 16)
+    gen_w, gen_h = int(c.get("gen_width", 1344)), int(c.get("gen_height", 768))
+
+    tmp = out_path.with_name(out_path.stem + ".gen.png")
+    generate(
+        full, tmp, seed=seed, w=gen_w, h=gen_h,
+        ckpt=c.get("ckpt", "dreamshaperXL_turbo.safetensors"),
+        steps=int(c.get("steps", 7)), cfg=float(c.get("cfg", 2.0)),
+        lora=c.get("lora", "polygon-style-sdxl.safetensors"),
+        lora_str=float(c.get("lora_strength", 0.9)),
+        timeout_s=int(c.get("timeout_sec", 300)),
+    )
+    # Upscale to the delivery size (default 2560x1440 = zoom headroom for Ken Burns,
+    # matching the channel's other images). Lanczos keeps flat low-poly facets crisp.
+    ow, oh = int(c.get("out_width", 2560)), int(c.get("out_height", 1440))
+    with Image.open(tmp) as im:
+        im.convert("RGB").resize((ow, oh), Image.LANCZOS).save(out_path, "PNG")
+    tmp.unlink(missing_ok=True)
+
+
 def generate_image(prompt: str, out_path: Path, cfg: dict[str, Any], label: str = "") -> None:
     """Generate one image for `prompt` at out_path, per config image.provider."""
     provider = cfg["image"]["provider"]
@@ -87,9 +126,11 @@ def generate_image(prompt: str, out_path: Path, cfg: dict[str, Any], label: str 
         _mock_image(prompt, out_path, _canvas_size(cfg), label or out_path.stem)
     elif provider == "openrouter":
         _openrouter_image(prompt, out_path, cfg)
+    elif provider == "comfy":
+        _comfy_image(prompt, out_path, cfg)
     else:
         raise RuntimeError(
-            f"unknown image provider '{provider}' (use 'openrouter' or 'mock')"
+            f"unknown image provider '{provider}' (use 'comfy', 'openrouter', or 'mock')"
         )
 
 

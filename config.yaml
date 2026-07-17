@@ -96,10 +96,22 @@ tts:
 # on gemini-2.5-flash-image, ~$0.50 for a 13-scene video; images cache so re-runs
 # are free). provider "mock" -> free placeholder PNGs for testing.
 image:
-  provider: "openrouter"
-  model: "google/gemini-2.5-flash-image"
+  provider: "comfy"          # local ComfyUI SDXL + faceted low-poly LoRA (free, offline)
+  model: "google/gemini-2.5-flash-image"   # openrouter fallback (provider: openrouter)
   aspect_ratio: "16:9"
   timeout_sec: 180
+  comfy:                     # local SDXL: DreamShaper XL Turbo + polygon-style LoRA
+    ckpt: "dreamshaperXL_turbo.safetensors"
+    lora: "polygon-style-sdxl.safetensors"
+    lora_strength: 0.9       # sweet spot: clean faceting without over-cook
+    trigger: "ral-polygon"   # polygon LoRA activation token (prepended to prompt)
+    steps: 7                 # DreamShaper Turbo = few steps
+    cfg: 2.0
+    gen_width: 1344          # SDXL native-ish 16:9; upscaled below
+    gen_height: 768
+    out_width: 2560          # Lanczos-upscaled delivery size (Ken Burns headroom)
+    out_height: 1440
+    timeout_sec: 300
 
 # --- Video assembly ----------------------------------------------------------
 video:
