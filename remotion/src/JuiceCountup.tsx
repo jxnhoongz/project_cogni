@@ -4,7 +4,7 @@ import { CREAM, OCHRE, TEAL, fontFamily } from "./theme";
 
 // Transparent editorial count-up overlay (big number, ink misregistration, kicker,
 // hairline rule) for the left negative space. ~4s (120 frames).
-export const JuiceCountup: React.FC<{ value: number; kicker: string; sub: string; prefix?: string; suffix?: string }> = ({ value, kicker, sub, prefix = "$", suffix = "" }) => {
+export const JuiceCountup: React.FC<{ value?: number; kicker: string; sub: string; prefix?: string; suffix?: string; word?: string }> = ({ value = 0, kicker, sub, prefix = "$", suffix = "", word }) => {
   const f = useCurrentFrame();
   const ease = { easing: Easing.out(Easing.cubic), extrapolateLeft: "clamp" as const, extrapolateRight: "clamp" as const };
   const clamp = { extrapolateLeft: "clamp" as const, extrapolateRight: "clamp" as const };
@@ -15,11 +15,20 @@ export const JuiceCountup: React.FC<{ value: number; kicker: string; sub: string
   const count = Math.round(interpolate(f, [22, 58], [0, value], { ...clamp, easing: Easing.out(Easing.cubic) }));
   const ruleW = interpolate(f, [34, 54], [0, 470], ease);
 
+  // A book with no signature number (e.g. Psychology of Money) reveals a WORD instead of
+  // counting — same masked reveal + ink misregistration, no numeric count.
+  const wordSize = word ? Math.min(300, Math.floor(720 / Math.max(word.length, 1) * 1.6)) : 300;
   const num = (color: string) => (
     <div style={{ position: "absolute", top: 0, left: 0, display: "flex", alignItems: "flex-start", color, fontFamily, lineHeight: 1, whiteSpace: "nowrap" }}>
-      {prefix ? <span style={{ fontSize: 150, marginTop: 34, marginRight: 6 }}>{prefix}</span> : null}
-      <span style={{ fontSize: 300 }}>{count}</span>
-      {suffix ? <span style={{ fontSize: 150, marginTop: 34, marginLeft: 6 }}>{suffix}</span> : null}
+      {word ? (
+        <span style={{ fontSize: wordSize, textTransform: "uppercase", letterSpacing: 2 }}>{word}</span>
+      ) : (
+        <>
+          {prefix ? <span style={{ fontSize: 150, marginTop: 34, marginRight: 6 }}>{prefix}</span> : null}
+          <span style={{ fontSize: 300 }}>{count}</span>
+          {suffix ? <span style={{ fontSize: 150, marginTop: 34, marginLeft: 6 }}>{suffix}</span> : null}
+        </>
+      )}
     </div>
   );
 

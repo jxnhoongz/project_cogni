@@ -49,6 +49,18 @@ def main() -> None:
     for i, it in enumerate(items, 1):
         it["index"] = i
 
+    # pair each animated beat's start with its end frame (for the first-last-frame clip)
+    by_target = {it["target"]: it["index"] for it in items}
+    pairs = []  # (scene id, start index, end index)
+    for s in scenes:
+        end_t = f"scene_{s['id']:03d}_end.png"
+        if end_t in by_target:
+            pairs.append((s["id"], by_target[f"scene_{s['id']:03d}.png"], by_target[end_t]))
+    partner = {}  # index -> (scene id, role, partner index)
+    for sid, si, ei in pairs:
+        partner[si] = (sid, "START", ei)
+        partner[ei] = (sid, "END", si)
+
     (out_dir / "manifest.json").write_text(
         json.dumps({"slug": slug, "items": items}, ensure_ascii=False, indent=1) + "\n",
         encoding="utf-8")
@@ -66,11 +78,24 @@ def main() -> None:
         "  KEEP THE NUMBERING EXACT. If a generation flops, re-roll it and keep its number —",
         "  do not renumber, or every image after it lands on the wrong scene.",
         "",
-        "=" * 78,
-        "",
     ]
+    if pairs:
+        lines += [
+            "  ANIMATED BEATS — these few scenes become motion clips, so each needs a matching",
+            "  END frame as well as its start. Generate BOTH numbers; make the END look like the",
+            "  exact same shot a moment later (same composition, one small change).",
+        ]
+        for sid, si, ei in pairs:
+            lines.append(f"     scene {sid}:  #{si} (start)  +  #{ei} (end)")
+        lines.append("")
+    lines += ["=" * 78, ""]
+
     for it in items:
-        lines.append(f"----- {it['index']} -----  (becomes {it['target']})")
+        tag = ""
+        if it["index"] in partner:
+            sid, role, other = partner[it["index"]]
+            tag = f"   [ANIMATED scene {sid} — {role} frame; pairs with #{other}]"
+        lines.append(f"----- {it['index']} -----  (becomes {it['target']}){tag}")
         lines.append(it["prompt"])
         lines.append("")
     (out_dir / "prompts.txt").write_text("\n".join(lines), encoding="utf-8")

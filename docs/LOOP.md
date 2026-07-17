@@ -22,7 +22,7 @@ and `main.py` imports `cogni.animate`→`httpx` at load. The venv has them.)
 | 8 | `narrate` | free | → `audio/scene_XXX.mp3` (+ `.srt`) via edge-tts (Brian voice) |
 | — | **CREDIT GATE** | — | `get_cost` preflight, quote the total, WAIT for explicit "go" (cogni-animate skill) |
 | 9 | `images` | see below | Three ways to buy the ~95 stills — pick per budget. STYLE.md is appended to every prompt automatically |
-| 10| `animate` (list) → generate | ~36 cr/clip | Higgsfield seedance_2_0 (standard, NOT fast). Only the ~4 tagged beats. **Dispatch subagents**, 3–4 in parallel per batch (firing all at once → 429) |
+| 10| `animate` (list) → generate | ~36 cr/clip | Higgsfield seedance_2_0 (standard, NOT fast). Only the ~4 tagged beats. **Dispatch subagents**, 3–4 in parallel per batch (firing all at once → 429). **Pass BOTH keyframes** — `medias` role `start_image` = scene_XXX.png, role `end_image` = scene_XXX_end.png (seedance_2_0 supports first-last-frame). Anchoring to both frames stops the clip drifting into a different scene (the recurring review flag) and lands it on a controlled last frame. Books 1–4 mistakenly used start-only and never fed the end frame |
 | 11| `assemble --force` | free (nvenc) | → `output/final.mp4` (stills + Ken Burns + clips + narration + subtitles + music). Writes `duration_sec` back |
 | 12| **Remotion per-book** (see below) | free | chapter cards + intro/outro book title + optional count-up, rendered with ALPHA |
 | 13| `scripts/finalize.py` | free (nvenc) | juice overlays + intro/outro in ONE pass → `output/final_full.mp4` ← **the upload file** |
