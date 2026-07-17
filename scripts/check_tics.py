@@ -34,11 +34,20 @@ _FILLER = re.compile(
 )
 
 
-def narration(slug: str) -> tuple[str, dict[str, int]]:
-    """Flattened narration text + {5gram: first scene id} for a project."""
-    p = PROJECTS / slug / "scenes.json"
+def find_books() -> dict[str, Path]:
+    """{book name: scenes.json} for every book under projects/, AT ANY DEPTH.
+
+    Must be recursive: finished books get filed into subfolders (e.g. projects/Uploaded/).
+    A non-recursive scan silently reports "nothing to check" once that happens — a false
+    pass, which is worse than no check at all.
+    """
+    return {f.parent.name: f for f in PROJECTS.rglob("scenes.json")}
+
+
+def narration(p: Path) -> tuple[str, list[tuple[str, int]]]:
+    """Flattened narration text + [(word, scene id)] for a book's scenes.json."""
     if not p.exists():
-        return "", {}
+        return "", []
     doc = json.loads(p.read_text(encoding="utf-8"))
     words, where = [], {}
     for s in doc.get("scenes", []):
@@ -76,20 +85,24 @@ def main() -> None:
     a = ap.parse_args()
 
     slug = (REPO / ".active_project").read_text(encoding="utf-8").strip()
-    others = [p.name for p in PROJECTS.iterdir()
-              if p.is_dir() and p.name != slug and (p / "scenes.json").exists()]
+    books = find_books()
+    if slug not in books:
+        raise SystemExit(f"[tics] {slug} has no scenes.json — run `script` first.")
+    others = sorted(n for n in books if n != slug)
     if not others:
-        print(f"[tics] no other books to compare against — nothing to check.")
+        print("[tics] no other books found under projects/ — nothing to compare against.\n"
+              "[tics] (If you have finished books, check they're still under projects/ — "
+              "this scan is recursive, so subfolders are fine.)")
         return
 
-    _, cur_words = narration(slug)
+    _, cur_words = narration(books[slug])
     if not cur_words:
-        raise SystemExit(f"[tics] {slug} has no scenes.json narration — run `script` first.")
+        raise SystemExit(f"[tics] {slug} has no narration — run `script` first.")
     cur = grams(cur_words, a.n)
 
     prior: dict[str, set[str]] = defaultdict(set)
     for o in others:
-        _, w = narration(o)
+        _, w = narration(books[o])
         for g in grams(w, a.n):
             prior[g].add(o)
 

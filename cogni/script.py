@@ -46,6 +46,30 @@ _SCENE_RULES = (
 )
 
 
+def _prior_protagonists(cfg: dict[str, Any]) -> list[str]:
+    """Protagonist names already used in other books (any depth under projects/).
+
+    The writer defaults HARD to "Marcus" — books 1, 3 and 4 each invented one before this
+    existed (Marcus Webb, Marcus Odom, Marcus Bell). A finite list of taken names is a
+    mechanical constraint, so hand it to the model instead of hoping for variety.
+    """
+    from .config import PROJECTS_DIR, resolve_path
+
+    active = resolve_path(cfg, "scenes").resolve()
+    names: set[str] = set()
+    for f in PROJECTS_DIR.rglob("scenes.json"):
+        try:
+            if f.resolve() == active:
+                continue
+            doc = json.loads(f.read_text(encoding="utf-8"))
+            name = ((doc.get("character") or {}).get("name") or "").strip()
+            if name:
+                names.add(name)
+        except Exception:
+            continue
+    return sorted(names)
+
+
 def _scene_record(i: int, s: dict[str, Any], chapter: str | None = None) -> dict[str, Any]:
     """Build one scenes.json record (the schema every stage downstream expects)."""
     return {
@@ -122,7 +146,8 @@ def _generate_short(cfg: dict[str, Any], outline: dict[str, Any], angle: str):
 # --- long mode (chaptered) ---------------------------------------------------
 
 def _build_structure_prompt(
-    outline: dict[str, Any], angle: str, lo_ch: int, hi_ch: int, minutes: int
+    outline: dict[str, Any], angle: str, lo_ch: int, hi_ch: int, minutes: int,
+    used: str = "",
 ) -> str:
     ideas = "\n".join(f"  - {k['title']}: {k['summary']}" for k in outline["key_ideas"])
     return (
@@ -136,7 +161,10 @@ def _build_structure_prompt(
         f"the book honestly as you go. Not a summary, not a list.\n\n"
         f"First, invent the protagonist: a specific everyperson who fits the book's world, "
         f"with a name, an ordinary life, and a real problem the book speaks to.\n"
-        f"Then plan {lo_ch}-{hi_ch} chapters that follow that same person:\n"
+        + (f"Other videos on this channel already used these protagonists: {used}. Give this "
+           f"one a clearly different FIRST name and a different look — same channel, new "
+           f"person.\n" if used else "")
+        + f"Then plan {lo_ch}-{hi_ch} chapters that follow that same person:\n"
         f"- Chapter 1 is the COLD OPEN: their relatable problem, framed as the real "
         f"question the book promises to answer (felt personally) — NOT the verdict.\n"
         f"- Middle chapters each take a distinct idea and put the character through it, with "
@@ -212,7 +240,9 @@ def _generate_long(cfg: dict[str, Any], outline: dict[str, Any], angle: str):
 
     print(f"[script] long mode (~{minutes} min) — Cognibot planning the character's chapters ...")
     struct = call_stage(
-        cfg, "script", _build_structure_prompt(outline, angle, lo_ch, hi_ch, minutes),
+        cfg, "script",
+        _build_structure_prompt(outline, angle, lo_ch, hi_ch, minutes,
+                               ", ".join(_prior_protagonists(cfg))),
         system=_SYSTEM, json_out=True,
     )
     character = _validate_character(struct)
