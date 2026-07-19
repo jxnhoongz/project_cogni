@@ -63,11 +63,9 @@ script:
   # a demand for book-specific concreteness, and let each book's own material decide the
   # shape of the judgement.
   angle: >-
-    Take a clear, honest point of view — this is a verdict, not a summary. Every
-    judgement names something concrete and particular to THIS book — a specific
-    claim, example, or piece of evidence — and says what that thing is actually
-    worth. Warm, specific, a little skeptical. Written to be heard: natural
-    spoken narration, first person.
+    Reach an honest, book-specific verdict — the one thing that most survives scrutiny and the
+    one that least does, decided by THIS book's own material. Do not import a recurring house
+    opinion (e.g. a standing "it ignores privilege" line); let each book earn its own judgement.
 
 # --- Motion modes (scenes.json -> per-scene mode + video_prompt) -------------
 # Tag each beat LOW (free Ken Burns) / MEDIUM / HIGH; write a motion prompt for the
