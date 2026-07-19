@@ -96,8 +96,8 @@ tts:
 # on gemini-2.5-flash-image, ~$0.50 for a 13-scene video; images cache so re-runs
 # are free). provider "mock" -> free placeholder PNGs for testing.
 image:
-  provider: "comfy"          # local ComfyUI SDXL + faceted low-poly LoRA (free, offline)
-  model: "google/gemini-2.5-flash-image"   # openrouter fallback (provider: openrouter)
+  provider: "openrouter"     # Gemini (quality) — local SDXL/comfy was lower quality
+  model: "google/gemini-2.5-flash-image"
   aspect_ratio: "16:9"
   timeout_sec: 180
   comfy:                     # local SDXL: DreamShaper XL Turbo + polygon-style LoRA
