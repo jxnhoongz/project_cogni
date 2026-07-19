@@ -16,6 +16,7 @@ and `main.py` imports `cogni.animate`→`httpx` at load. The venv has them.)
 | 3 | `script` | free | → `scenes.json` — invents ONE protagonist, long-mode chapters, verdict woven in |
 | 4 | `script-review` → `revise` → `fact-check` | free | critique + fix weak/ungrounded scenes (optional but cheap) |
 | 4b | `python scripts/check_tics.py` | free | **cross-book tic check.** Flags phrasing reused from earlier books, with scene ids. Rewrite those beats in scenes.json and re-run until it PASSES — *before* narrate, or the tic is baked into audio. Books 1-3 shipped sharing "as an instruction manual", "give the book real credit", "here's my honest take" |
+| 4c | `python scripts/check_crutches.py` | free | **within-script crutch check.** Flags "honest" overuse and skeleton phrases ("here's my honest take", "X years later", "who this is for", "in this video"), with scene ids. Rewrite those beats and re-run until it PASSES — same pre-narrate slot as `check_tics.py` |
 | 5 | `visuals` | free | per-scene keyframe + start/end/video prompts |
 | 6 | `modes` | free | tag each beat LOW/MEDIUM/HIGH + motion prompt. Cap `max_animated` (config, now **4**). Beat 1 forced HIGH |
 | 7 | `review` | free | validate visual prompts, gate generation |
@@ -90,6 +91,10 @@ explicit "go". ~91 images + 4 clips ≈ a few hundred credits. Check `balance` f
   twice. Fixed by making the verdict derive from the book's own specifics. **Never re-add a
   fixed list of verdict beats to the angle or the chapter roles** — and note that a stronger
   model does NOT fix this: it fills the same template more elegantly.
+- **Story Architect designs the verdict now.** Long-mode `script` runs a Story Architect pass
+  before the chapters, emitting `doc["story"]` — the Story Bible (protagonist + wound, one
+  earned book-specific argument, a central wager the book can lose, plant→payoff, closing
+  scene). The verdict is designed there, not in config `script.angle`.
 - **Fresh protagonist per book:** the writer defaults to "Marcus" (books 1 and 3 both got one).
   Rename to a distinct name + a visually distinct look. Marcus Webb (stocky/polo/lanyard),
   Danny Rivera (wiry/hoodie), Ray Delgado (glasses/polo/smirk).
