@@ -114,3 +114,29 @@ def test_architect_prompt_demands_bible():
     assert "test" in p.lower() and "illustrat" in p.lower()      # test, don't illustrate
     assert "mostly-right" in p and "envy" in p                    # variety: prior shapes fed in
     assert "lose" in p.lower()                                    # the book can lose the wager
+
+
+BIBLE = {
+    "protagonist": {"name": "Theo", "description": "tired man in a teal shirt", "wound": "watched his dad retire broke"},
+    "argument": {"stance": "dangerously-half-right", "claim": "patience is a luxury good"},
+    "wager": {"book_claim_on_trial": "just be patient", "decision": "bet the emergency fund", "outcome": "book-loses"},
+    "plant": "the aquarium trip", "payoff": "his kid ignores the watch", "closing_scene": "Theo at the aquarium",
+    "opening_move": "crisis", "voice_moves": ["total recall"],
+    "acts": [{"title": "The Bet", "focus": "he risks the fund", "role": "the wager",
+              "ideas": [{"idea": "margin of safety", "mode": "failure"}], "carries": "wager"}],
+}
+
+def test_act_prompt_dramatizes_and_carries_wager():
+    p = script._build_act_prompt(OUTLINE, BIBLE, BIBLE["acts"][0], 3, 6, ["Cold Open"], 10, 14)
+    assert "Theo" in p and "teal shirt" in p            # threads protagonist
+    assert "watched his dad retire broke" in p          # threads the wound
+    assert "margin of safety" in p                       # the act's idea
+    assert "dramatize" in p.lower() or "do not explain" in p.lower()
+    assert "wager" in p.lower() and "lose" in p.lower()  # this act carries the wager; book can lose
+    assert "honest" not in p.lower()                     # we don't tell it to be "honest" (the crutch)
+
+def test_act_prompt_final_pays_off_verdict():
+    final = dict(BIBLE["acts"][0]); final["carries"] = "payoff"; final["role"] = "final"
+    p = script._build_act_prompt(OUTLINE, BIBLE, final, 6, 6, ["a", "b"], 10, 14)
+    assert "patience is a luxury good" in p              # the withheld argument lands here
+    assert "aquarium" in p.lower()                        # the closing scene

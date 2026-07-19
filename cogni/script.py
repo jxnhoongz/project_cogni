@@ -36,8 +36,8 @@ _SYSTEM = (
 # Shared scene-writing rules, used by the short pass and every chapter pass.
 _SCENE_RULES = (
     "- narration: what Cognibot says in this beat. Clear, natural, spoken first person. "
-    "Teach through the character's story and give your honest take on the book; never "
-    "flatly summarize.\n"
+    "Teach through the character's story and give Cognibot's pointed, specific judgement; "
+    "never flatly summarize.\n"
     "- on_screen_text: a very short caption for the screen (<= 6 words), or \"\" if none.\n"
     "- image_prompt: describe ONE still image for THIS beat — the single concrete moment "
     "being narrated right now, not the scene's whole idea. When a person appears it is the "
@@ -292,6 +292,46 @@ def _build_chapter_prompt(
         f"sentences of narration and an image for that single moment.\n\n"
         f"Return JSON: {{\"scenes\": [ {{\"narration\": ..., \"on_screen_text\": ..., "
         f"\"image_prompt\": ...}}, ... ]}}.\n"
+        f"{_SCENE_RULES}"
+    )
+
+
+def _build_act_prompt(outline: dict[str, Any], bible: dict[str, Any], act: dict[str, Any],
+                      idx: int, total: int, prior_titles: list[str], lo_sc: int, hi_sc: int) -> str:
+    p = bible["protagonist"]
+    who = f"{p['name']} — {p['description']}" + (f" (wound: {p['wound']})" if p["wound"] else "")
+    ideas = "; ".join(f"{i['idea']} (enters as {i['mode']})" for i in act["ideas"]) or "(no new book idea this act)"
+    prior = "; ".join(prior_titles) if prior_titles else "(this is the first act)"
+    carries = act["carries"]
+    extra = ""
+    if carries == "wager":
+        w = bible["wager"]
+        extra = (f"\nTHIS act carries the WAGER: {p['name']} makes this real decision — {w['decision']} — "
+                 f"with '{w['book_claim_on_trial']}' on trial. Outcome: {w['outcome']}. If the book LOSES here, "
+                 f"let it lose on-screen; do not rescue it. Real downside, real tension.")
+    elif carries == "plant":
+        extra = f"\nTHIS act plants: {bible['plant']} — set it up so it can pay off later; don't underline it."
+    elif carries == "payoff":
+        extra = (f"\nTHIS is where it all lands. Detonate the plant ({bible['payoff']}), then deliver the "
+                 f"WITHHELD verdict for the first time: \"{bible['argument']['claim']}\". End on the closing "
+                 f"scene — {bible['closing_scene']} — a concrete moment, NOT a 'who this is for' list.")
+    voice = ", ".join(bible["voice_moves"])
+    return (
+        f"Book: {outline['title']}\nThesis: {outline['thesis']}\n\n"
+        f"You are Cognibot, writing ONE act of a video that follows ONE protagonist: {who}. "
+        f"Keep this SAME person consistent. Acts already written: {prior}.\n\n"
+        f"Write ACT {idx} of {total}: \"{act['title']}\". Role in the arc: {act['role'] or '(continue the story)'}.\n"
+        f"Focus: {act['focus']}\nBook ideas this act uses: {ideas}.{extra}\n\n"
+        f"RULES:\n"
+        f"- DRAMATIZE, do not explain. The protagonist ACTS, decides, or DISCOVERS the idea through friction — "
+        f"never step out to lecture the framework at the viewer.\n"
+        f"- Do NOT deliver the final verdict early. Middle acts raise questions; only the payoff act judges.\n"
+        f"- No 'here's my take on this stretch' summaries, no 'X years later' unless it earns a real scene.\n"
+        + (f"- Use a bot-only voice move where it fits: {voice} (a flex a human reviewer can't make).\n" if voice else "")
+        + f"- Keep Cognibot blunt and funny; let specificity carry the bluntness (don't announce it).\n\n"
+        f"Write {lo_sc}-{hi_sc} beats that flow as one continuous stretch — do NOT read the act title aloud. "
+        f"Each beat = 1-3 sentences of narration and an image for that single moment.\n\n"
+        f'Return JSON: {{"scenes": [{{"narration": ..., "on_screen_text": ..., "image_prompt": ...}}, ...]}}.\n'
         f"{_SCENE_RULES}"
     )
 
