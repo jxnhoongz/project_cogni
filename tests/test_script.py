@@ -34,24 +34,6 @@ def test_validate_scenes_still_works():
     assert got[0] == {"narration": "n", "on_screen_text": "o", "image_prompt": "i"}
 
 
-def test_structure_prompt_is_cognibot_character_arc():
-    p = script._build_structure_prompt(OUTLINE, "angle", 5, 7, 30)
-    assert "Cognibot" in p
-    assert "protagonist" in p.lower() or "character" in p.lower()
-    assert '"character"' in p and '"chapters"' in p
-
-
-def test_chapter_prompt_threads_character():
-    ch = {"title": "The Trap", "focus": "sets up the problem"}
-    p = script._build_chapter_prompt(
-        OUTLINE, "angle", {"name": "Dana", "description": "nurse in scrubs, seen from behind"},
-        ch, 1, 6, [], 10, 14,
-    )
-    assert "Dana" in p
-    assert "scrubs" in p
-    assert "beat" in p.lower()
-
-
 def test_validate_story_ok():
     data = {"story": {
         "protagonist": {"name": "Theo", "description": "tired man in teal", "wound": "watched his dad retire broke"},
@@ -140,3 +122,25 @@ def test_act_prompt_final_pays_off_verdict():
     p = script._build_act_prompt(OUTLINE, BIBLE, final, 6, 6, ["a", "b"], 10, 14)
     assert "patience is a luxury good" in p              # the withheld argument lands here
     assert "aquarium" in p.lower()                        # the closing scene
+
+
+def test_generate_long_wires_architect_then_acts(monkeypatch):
+    calls = {"n": 0}
+    def fake_call_stage(cfg, stage, prompt, **kw):
+        calls["n"] += 1
+        if "ARCHITECTING" in prompt:                       # the architect pass
+            return {"protagonist": {"name": "Theo", "description": "teal shirt guy"},
+                    "argument": {"stance": "mostly-wrong", "claim": "the book oversells patience"},
+                    "wager": {"book_claim_on_trial": "be patient", "decision": "bet", "outcome": "book-loses"},
+                    "acts": [{"title": "Cold Open", "carries": "none"}, {"title": "The Bet", "carries": "wager"}]}
+        return {"scenes": [{"narration": "n", "on_screen_text": "", "image_prompt": "i"}]}
+    monkeypatch.setattr(script, "call_stage", fake_call_stage)
+    monkeypatch.setattr(script, "_prior_story_shapes", lambda cfg: {"stances": [], "openings": [], "wagers": []})
+    cfg = {"script": {"long": {"min_chapters": 2, "max_chapters": 2,
+                               "min_scenes_per_chapter": 1, "max_scenes_per_chapter": 1, "target_minutes": 20}}}
+    scenes, extra = script._generate_long(cfg, OUTLINE, "angle")
+    assert calls["n"] == 3                                  # 1 architect + 2 acts
+    assert extra["story"]["argument"]["claim"] == "the book oversells patience"
+    assert extra["chapters"] == ["Cold Open", "The Bet"]
+    assert scenes[0]["chapter"] == "Cold Open" and scenes[1]["chapter"] == "The Bet"
+    assert scenes[0]["id"] == 1 and scenes[1]["id"] == 2
