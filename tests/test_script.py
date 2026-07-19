@@ -87,3 +87,17 @@ def test_validate_story_rejects_missing_argument_and_thin_acts():
         script._validate_story({"protagonist": {"name": "X", "description": "d"}, "acts": [{"title": "1"}, {"title": "2"}]})
     with pytest.raises(RuntimeError):
         script._validate_story({"protagonist": {"name": "X", "description": "d"}, "argument": {"claim": "c"}, "acts": [{"title": "1"}]})
+
+
+def test_shapes_from_docs_collects_and_dedupes():
+    docs = [
+        {"story": {"argument": {"stance": "mostly-right"}, "opening_move": "envy",
+                   "wager": {"book_claim_on_trial": "just be patient"}}},
+        {"story": {"argument": {"stance": "mostly-right"}, "opening_move": "crisis",
+                   "wager": {"book_claim_on_trial": "cut the lattes"}}},
+        {"scenes": []},  # old book, no story — tolerated
+    ]
+    s = script._shapes_from_docs(docs)
+    assert s["stances"] == ["mostly-right"]                 # deduped
+    assert set(s["openings"]) == {"crisis", "envy"}
+    assert "just be patient" in s["wagers"]

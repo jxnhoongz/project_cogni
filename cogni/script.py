@@ -72,6 +72,35 @@ def _prior_protagonists(cfg: dict[str, Any]) -> list[str]:
     return sorted(names)
 
 
+def _shapes_from_docs(docs: list[dict[str, Any]]) -> dict[str, list[str]]:
+    """Story-shapes already used by other books — to force variety."""
+    stances, openings, wagers = set(), set(), set()
+    for d in docs:
+        st = (d or {}).get("story") or {}
+        if s := str((st.get("argument") or {}).get("stance") or "").strip():
+            stances.add(s)
+        if o := str(st.get("opening_move") or "").strip():
+            openings.add(o)
+        if w := str((st.get("wager") or {}).get("book_claim_on_trial") or "").strip():
+            wagers.add(w)
+    return {"stances": sorted(stances), "openings": sorted(openings), "wagers": sorted(wagers)}
+
+
+def _prior_story_shapes(cfg: dict[str, Any]) -> dict[str, list[str]]:
+    """Collect prior story-shapes from every OTHER book under projects/."""
+    from .config import PROJECTS_DIR, resolve_path
+    active = resolve_path(cfg, "scenes").resolve()
+    docs = []
+    for f in PROJECTS_DIR.rglob("scenes.json"):
+        try:
+            if f.resolve() == active:
+                continue
+            docs.append(json.loads(f.read_text(encoding="utf-8")))
+        except Exception:
+            continue
+    return _shapes_from_docs(docs)
+
+
 def _scene_record(i: int, s: dict[str, Any], chapter: str | None = None) -> dict[str, Any]:
     """Build one scenes.json record (the schema every stage downstream expects)."""
     return {
