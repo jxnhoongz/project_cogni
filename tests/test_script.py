@@ -50,3 +50,40 @@ def test_chapter_prompt_threads_character():
     assert "Dana" in p
     assert "scrubs" in p
     assert "beat" in p.lower()
+
+
+def test_validate_story_ok():
+    data = {"story": {
+        "protagonist": {"name": "Theo", "description": "tired man in teal", "wound": "watched his dad retire broke"},
+        "argument": {"stance": "dangerously-half-right", "claim": "Housel's patience is a luxury good"},
+        "wager": {"book_claim_on_trial": "just be patient", "decision": "bet the emergency fund on a tip", "outcome": "book-loses"},
+        "plant": "the aquarium trip", "payoff": "his kid ignores the watch",
+        "closing_scene": "Theo at the aquarium", "opening_move": "envy", "voice_moves": ["total recall"],
+        "acts": [
+            {"title": "A", "focus": "f", "role": "cold open", "ideas": [{"idea": "compounding", "mode": "obstacle"}], "carries": "none"},
+            {"title": "B", "focus": "g", "role": "final", "ideas": [], "carries": "payoff"},
+        ],
+    }}
+    b = script._validate_story(data["story"])
+    assert b["protagonist"]["name"] == "Theo"
+    assert b["argument"]["stance"] == "dangerously-half-right"
+    assert b["acts"][1]["carries"] == "payoff"
+
+
+def test_validate_story_defaults_optionals():
+    b = script._validate_story({
+        "protagonist": {"name": "X", "description": "d"},
+        "argument": {"claim": "c"},
+        "acts": [{"title": "1"}, {"title": "2"}],
+    })
+    assert b["protagonist"]["wound"] == ""
+    assert b["voice_moves"] == []
+    assert b["acts"][0]["carries"] == "none" and b["acts"][0]["ideas"] == []
+
+
+def test_validate_story_rejects_missing_argument_and_thin_acts():
+    import pytest
+    with pytest.raises(RuntimeError):
+        script._validate_story({"protagonist": {"name": "X", "description": "d"}, "acts": [{"title": "1"}, {"title": "2"}]})
+    with pytest.raises(RuntimeError):
+        script._validate_story({"protagonist": {"name": "X", "description": "d"}, "argument": {"claim": "c"}, "acts": [{"title": "1"}]})

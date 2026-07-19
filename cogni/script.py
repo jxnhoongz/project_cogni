@@ -350,3 +350,58 @@ def _validate_character(data: dict[str, Any]) -> dict[str, str] | None:
     if not (name and desc):
         return None
     return {"name": name, "description": desc}
+
+
+_STANCES = {"mostly-right", "mostly-wrong", "dangerously-half-right"}
+_OUTCOMES = {"book-wins", "book-loses", "mixed"}
+_MODES = {"tool", "obstacle", "failure", "discovery"}
+_CARRIES = {"wager", "plant", "payoff", "none"}
+
+
+def _validate_story(story: dict[str, Any]) -> dict[str, Any]:
+    """Validate + clean the Story Architect's output (the Story Bible)."""
+    if not isinstance(story, dict):
+        raise RuntimeError("script(long): architect returned no story bible")
+    p = story.get("protagonist") or {}
+    name, desc = str(p.get("name") or "").strip(), str(p.get("description") or "").strip()
+    if not (name and desc):
+        raise RuntimeError("script(long): story bible has no named protagonist with a description")
+    arg = story.get("argument") or {}
+    claim = str(arg.get("claim") or "").strip()
+    if not claim:
+        raise RuntimeError("script(long): story bible has no argument.claim (the verdict)")
+    stance = str(arg.get("stance") or "").strip()
+    if stance not in _STANCES:
+        stance = "dangerously-half-right"
+    acts_in = story.get("acts")
+    if not isinstance(acts_in, list) or len(acts_in) < 2:
+        raise RuntimeError("script(long): story bible needs >= 2 acts")
+    acts = []
+    for i, a in enumerate(acts_in, 1):
+        a = a if isinstance(a, dict) else {}
+        ideas = [{"idea": str(x.get("idea") or "").strip(),
+                  "mode": (str(x.get("mode") or "").strip() if str(x.get("mode") or "").strip() in _MODES else "tool")}
+                 for x in (a.get("ideas") or []) if isinstance(x, dict) and str(x.get("idea") or "").strip()]
+        carries = str(a.get("carries") or "none").strip()
+        acts.append({
+            "title": str(a.get("title") or f"Act {i}").strip(),
+            "focus": str(a.get("focus") or "").strip(),
+            "role": str(a.get("role") or "").strip(),
+            "ideas": ideas,
+            "carries": carries if carries in _CARRIES else "none",
+        })
+    wager = story.get("wager") or {}
+    out = str(wager.get("outcome") or "").strip()
+    return {
+        "protagonist": {"name": name, "description": desc, "wound": str(p.get("wound") or "").strip()},
+        "argument": {"stance": stance, "claim": claim},
+        "wager": {"book_claim_on_trial": str(wager.get("book_claim_on_trial") or "").strip(),
+                  "decision": str(wager.get("decision") or "").strip(),
+                  "outcome": out if out in _OUTCOMES else "mixed"},
+        "plant": str(story.get("plant") or "").strip(),
+        "payoff": str(story.get("payoff") or "").strip(),
+        "closing_scene": str(story.get("closing_scene") or "").strip(),
+        "opening_move": str(story.get("opening_move") or "").strip(),
+        "voice_moves": [str(v).strip() for v in (story.get("voice_moves") or []) if str(v).strip()],
+        "acts": acts,
+    }
