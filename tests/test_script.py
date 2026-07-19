@@ -101,3 +101,16 @@ def test_shapes_from_docs_collects_and_dedupes():
     assert s["stances"] == ["mostly-right"]                 # deduped
     assert set(s["openings"]) == {"crisis", "envy"}
     assert "just be patient" in s["wagers"]
+
+
+def test_architect_prompt_demands_bible():
+    p = script._build_architect_prompt(
+        OUTLINE, "angle", 5, 7, 30,
+        {"stances": ["mostly-right"], "openings": ["envy"], "wagers": ["just be patient"]},
+    )
+    assert "Cognibot" in p
+    for key in ('"argument"', '"wager"', '"plant"', '"payoff"', '"closing_scene"', '"acts"', '"wound"'):
+        assert key in p, key
+    assert "test" in p.lower() and "illustrat" in p.lower()      # test, don't illustrate
+    assert "mostly-right" in p and "envy" in p                    # variety: prior shapes fed in
+    assert "lose" in p.lower()                                    # the book can lose the wager

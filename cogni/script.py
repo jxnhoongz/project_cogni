@@ -212,6 +212,52 @@ def _build_structure_prompt(
     )
 
 
+def _build_architect_prompt(outline: dict[str, Any], angle: str, lo_ch: int, hi_ch: int,
+                            minutes: int, shapes: dict[str, list[str]]) -> str:
+    ideas = "\n".join(f"  - {k['title']}: {k['summary']}" for k in outline["key_ideas"])
+    used = ""
+    if shapes.get("stances") or shapes.get("openings") or shapes.get("wagers"):
+        used = (
+            "\nOther videos on this channel already used these — pick DIFFERENT ones:\n"
+            f"  - verdict stances used: {', '.join(shapes['stances']) or 'none'}\n"
+            f"  - opening moves used: {', '.join(shapes['openings']) or 'none'}\n"
+            f"  - claims already put on trial: {', '.join(shapes['wagers']) or 'none'}\n"
+        )
+    return (
+        f"Book: {outline['title']}"
+        + (f" by {outline['author']}" if outline.get("author") else "")
+        + f"\nThesis: {outline['thesis']}\n\nKey ideas:\n{ideas}\n\n"
+        f"Stance to hold (do NOT import a house opinion; make the verdict specific to THIS book):\n{angle}\n\n"
+        f"You are Cognibot, ARCHITECTING a ~{minutes}-minute video. Design a STORY, not a summary. "
+        f"The golden rule: TEST the book, don't ILLUSTRATE it. A protagonist who merely demonstrates each "
+        f"idea in order is a failure. Instead the protagonist must make a real decision where one of the "
+        f"book's central claims is on trial — and sometimes the book's advice must LOSE. The verdict is "
+        f"EARNED by that outcome, never asserted, and is WITHHELD until the end.\n"
+        f"{used}\n"
+        f"Design the whole thing, then output it as JSON:\n"
+        f"{{\n"
+        f'  "protagonist": {{"name": <string>, "description": <one sentence, recurring low-poly look with a '
+        f'clear face, non-photorealistic>, "wound": <one specific bit of history/shame that makes them care '
+        f'— keep it light, this stays a funny/useful channel>}},\n'
+        f'  "argument": {{"stance": <"mostly-right" | "mostly-wrong" | "dangerously-half-right">, '
+        f'"claim": <one sentence someone could disagree with, ABOUT THIS BOOK — the earned verdict>}},\n'
+        f'  "wager": {{"book_claim_on_trial": <which claim the protagonist bets on>, "decision": <the real '
+        f'decision with a downside>, "outcome": <"book-wins" | "book-loses" | "mixed">}},\n'
+        f'  "plant": <something set up early>, "payoff": <how it detonates late>,\n'
+        f'  "closing_scene": <one concrete final moment that embodies the argument — a scene, not a '
+        f'"who it is for" list>,\n'
+        f'  "opening_move": <the KIND of cold open, different from the used ones above>,\n'
+        f'  "voice_moves": [<1-2 moves only a bot could make: total recall of the whole text, catching the '
+        f'book contradict itself>],\n'
+        f'  "acts": [{{"title": <short>, "focus": <1-2 sentences>, "role": <its job in the arc>, '
+        f'"ideas": [{{"idea": <which key idea>, "mode": <"tool" | "obstacle" | "failure" | "discovery">}}], '
+        f'"carries": <"wager" | "plant" | "payoff" | "none">}}, ...]\n'
+        f"}}\n"
+        f"Plan {lo_ch}-{hi_ch} acts. Exactly one act carries the wager, one the payoff; ideas may enter out "
+        f"of order. Act 1 is the cold open (the protagonist's problem as a live question — NOT the verdict)."
+    )
+
+
 def _build_chapter_prompt(
     outline: dict[str, Any], angle: str, character: dict[str, str] | None,
     chapter: dict[str, Any], idx: int, total: int, prior_titles: list[str],
