@@ -90,12 +90,19 @@ tts:
   subtitle_max_chars: 42
 
 # --- Image generation --------------------------------------------------------
-# provider "openrouter" -> OpenRouter /images (uses OPENROUTER_API_KEY, ~$0.04/image
-# on gemini-2.5-flash-image, ~$0.50 for a 13-scene video; images cache so re-runs
-# are free). provider "mock" -> free placeholder PNGs for testing.
+# provider "openrouter" -> OpenRouter /images (uses OPENROUTER_API_KEY, ~$0.039/image,
+# ~$3.25 for a 84-image book; images cache so re-runs are free).
+# provider "mock" -> free placeholder PNGs for testing.
+#
+# Model chosen by bake-off (2026-07-20, 3 prompts x 4 models, $0.32): Nano Banana 2 Lite
+# costs the SAME as the old gemini-2.5-flash-image but is clearly better (2.5-flash
+# rendered a smiling face for "tense sweating" and empty backgrounds) and is natively
+# 16:9 (1376x768). Rejected: gpt-5-image-mini — 4x cheaper but OpenAI image models only
+# do 1024x1024/1536x1024/1024x1536, i.e. NO 16:9, so every frame would need a ~16% crop.
+# Nano Banana 2 (~$0.077) and Nano Banana Pro (~$0.155, ~$13/book) aren't worth the jump.
 image:
   provider: "openrouter"     # Gemini (quality) — local SDXL/comfy was lower quality
-  model: "google/gemini-2.5-flash-image"
+  model: "google/gemini-3.1-flash-lite-image"   # Nano Banana 2 Lite
   aspect_ratio: "16:9"
   timeout_sec: 180
   comfy:                     # local SDXL: DreamShaper XL Turbo + polygon-style LoRA
