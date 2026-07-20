@@ -4,7 +4,11 @@ import { CREAM, OCHRE, TEAL, fontFamily } from "./theme";
 
 // Transparent editorial count-up overlay (big number, ink misregistration, kicker,
 // hairline rule) for the left negative space. ~4s (120 frames).
-export const JuiceCountup: React.FC<{ value?: number; kicker: string; sub: string; prefix?: string; suffix?: string; word?: string }> = ({ value = 0, kicker, sub, prefix = "$", suffix = "", word }) => {
+// `ink` is the top layer of the misregistration (number, rule, sub); OCHRE always sits
+// behind it. TEAL reads on a light beat but disappears on a dark one — book #5's count-up
+// lands on a dark teal wall, where the sub and rule vanished entirely. Pick it to contrast
+// with the beat the count-up actually sits on.
+export const JuiceCountup: React.FC<{ value?: number; kicker: string; sub: string; prefix?: string; suffix?: string; word?: string; ink?: string }> = ({ value = 0, kicker, sub, prefix = "$", suffix = "", word, ink = TEAL }) => {
   const f = useCurrentFrame();
   const ease = { easing: Easing.out(Easing.cubic), extrapolateLeft: "clamp" as const, extrapolateRight: "clamp" as const };
   const clamp = { extrapolateLeft: "clamp" as const, extrapolateRight: "clamp" as const };
@@ -41,11 +45,11 @@ export const JuiceCountup: React.FC<{ value?: number; kicker: string; sub: strin
         <div style={{ overflow: "hidden", height: 320, width: 620 }}>
           <div style={{ position: "relative", height: 320, transform: `translateY(${revealY}%)` }}>
             <div style={{ position: "absolute", left: 7, top: 8 }}>{num(OCHRE)}</div>
-            {num(TEAL)}
+            {num(ink)}
           </div>
         </div>
-        <div style={{ width: ruleW, height: 5, backgroundColor: TEAL, marginTop: 6 }} />
-        <div style={{ fontFamily, color: TEAL, fontSize: 30, letterSpacing: 4, textTransform: "uppercase", marginTop: 14, opacity: 0.85 }}>
+        <div style={{ width: ruleW, height: 5, backgroundColor: ink, marginTop: 6 }} />
+        <div style={{ fontFamily, color: ink, fontSize: 30, letterSpacing: 4, textTransform: "uppercase", marginTop: 14, opacity: 0.85 }}>
           {sub}
         </div>
       </div>

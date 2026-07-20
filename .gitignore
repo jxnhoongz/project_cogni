@@ -11,9 +11,11 @@ credentials/*
 /projects/
 /.active_project
 
-# Shared background music (drop your own in; not committed)
+# Shared background music (drop your own in; not committed) — but CREDITS.md IS
+# tracked: CC-BY attribution is a licence condition, so it can't live only on one disk.
 assets/audio/*
 !assets/audio/.gitkeep
+!assets/audio/CREDITS.md
 data/videos/*
 !data/videos/.gitkeep
 

@@ -18,6 +18,9 @@ export const Thumbnail: React.FC<{
   // main ink + a single dark (teal) offset copy = a clean print "misprint" shadow
   // that stays legible over the art (no same-colour doubling).
   const Head = ({ text, color }: { text: string; color: string }) => (
+    // The offset copy is positioned at left:7 of THIS box, so the box must hug its text
+    // or the shadow strands itself on the far left of a right-aligned headline. The
+    // parent is a flex column, which shrink-wraps each line to its content.
     <div style={{ position: "relative", lineHeight: 0.92, letterSpacing: 2, wordSpacing: 26 }}>
       <span style={{ position: "absolute", left: 7, top: 8, color: TEAL, opacity: 0.85 }}>{text}</span>
       <span style={{ position: "relative", color }}>{text}</span>
@@ -44,6 +47,9 @@ export const Thumbnail: React.FC<{
             textTransform: "uppercase",
             textAlign: alignRight ? "right" : "left",
             textShadow: "0 6px 24px rgba(0,0,0,0.45)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: alignRight ? "flex-end" : "flex-start",
           }}
         >
           <Head text={line1} color={CREAM} />

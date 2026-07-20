@@ -120,21 +120,21 @@ def cmd_animate(_args: argparse.Namespace) -> int:
     if not plan:
         print("No scenes flagged animate=true. Tick 'Animate' in the UI (Edit script) first.")
         return 0
-    print(f"{len(plan)} scene(s) flagged for Higgsfield hero clips (start->end):")
+    # Seedance drives motion from the SINGLE start still + a camera-move prompt; end
+    # keyframes are retired (two near-identical frames froze the clips). Reporting a
+    # missing end frame as "[wait] ... run `images`" sent you back to a stage that had
+    # already finished — the start still is the only thing a clip needs.
+    print(f"{len(plan)} scene(s) flagged for Higgsfield hero clips (single start still):")
     for p in plan:
         if p["has_clip"]:
             state = "[done] has clip"
-        elif p["start_image"] and p["end_image"]:
-            state = "[ready] start + end keyframes"
         elif p["start_image"]:
-            state = "[wait] end keyframe missing - run `images`"
+            state = "[ready] start still"
         else:
-            state = "[wait] no keyframes - run `images`"
+            state = "[wait] no start still - run `images`"
         print(f"  scene {p['id']:>2}: {state}")
         if p["start_image"]:
             print(f"           start: {p['start_image']}")
-        if p["end_image"]:
-            print(f"           end:   {p['end_image']}")
         print(f"           clip:  {p['clip']}")
     print("\nWith the Higgsfield MCP connected, run the `cogni-animate` skill to "
           "generate these clips and re-assemble.")

@@ -6,6 +6,7 @@ import { Outro } from "./Outro";
 import { JuiceChapter } from "./JuiceChapter";
 import { JuiceCountup } from "./JuiceCountup";
 import { Thumbnail } from "./Thumbnail";
+import { CREAM } from "./theme";
 
 // The active book's acts, in order — these must match scenes.json `chapter` values,
 // since finalize.py places Ch{n}.mov at each act's first beat (Ch1 skipped by default
@@ -47,17 +48,19 @@ export const RemotionRoot: React.FC = () => {
         // motif is "six months", but "6 MONTHS" as prefix/suffix overflows the 620px
         // mask, so the numeral alone fills it and the kicker/sub carry the phrase:
         // "SHE SPENT / 6 / MONTHS MINING HER OWN PAIN".
-        defaultProps={{ value: 6, prefix: "", suffix: "", kicker: "She spent", sub: "months mining her own pain" }}
+        // ink=CREAM: beat 72 is a dark teal wall, where the default TEAL ink vanished.
+        defaultProps={{ value: 6, prefix: "", suffix: "", kicker: "She spent", sub: "months mining her own pain", ink: CREAM }}
       />
       <Composition id="JuiceDemo" component={JuiceDemo} durationInFrames={750} fps={30} width={1920} height={1080} />
-      {/* Thumbnails for the ACTIVE book (Psychology of Money). Backgrounds live in
-          remotion/public/ — copy the chosen scene stills there before rendering. */}
+      {/* Thumbnails for the ACTIVE book (Man's Search for Meaning). Backgrounds live in
+          remotion/public/ — copy the chosen scene stills there before rendering.
+          Keep each line under ~12 chars: 128px type overflows 1280 wide past that. */}
       <Composition id="ThumbA" component={Thumbnail} durationInFrames={1} fps={30} width={1280} height={720}
-        defaultProps={{ bg: "pm_candle.png", line1: "$60,000.", line2: "Gone.", side: "left" as const }} />
+        defaultProps={{ bg: "msm_face.png", line1: "Suffer", line2: "correctly.", side: "left" as const }} />
       <Composition id="ThumbB" component={Thumbnail} durationInFrames={1} fps={30} width={1280} height={720}
-        defaultProps={{ bg: "pm_face.png", line1: "Good advice.", line2: "Bad ending.", side: "left" as const }} />
+        defaultProps={{ bg: "msm_car.png", line1: "She obeyed", line2: "the book.", side: "right" as const }} />
       <Composition id="ThumbC" component={Thumbnail} durationInFrames={1} fps={30} width={1280} height={720}
-        defaultProps={{ bg: "pm_lambo.png", line1: "Comfort picked", line2: "the number.", side: "left" as const }} />
+        defaultProps={{ bg: "msm_floor.png", line1: "It came when", line2: "she quit.", side: "right" as const }} />
     </>
   );
 };
