@@ -204,13 +204,38 @@ def _scene_clip(
 
 
 def _find_music(cfg: dict[str, Any]) -> Path | None:
+    """Pick the background track.
+
+    `video.music` names a file to force it. Otherwise pick DETERMINISTICALLY from the
+    library by the active book's slug: taking the alphabetically-first track (the old
+    behaviour) gave every book the same bed, so the channel sounded identical video to
+    video. Hashing the slug keeps one book on one track across re-assembles while
+    different books land on different tracks.
+    """
+    import hashlib
+
+    from .config import active_project
+
     music_dir = resolve_shared(cfg, "music")
     if not music_dir.exists():
         return None
-    for p in sorted(music_dir.iterdir()):
-        if p.suffix.lower() in _MUSIC_EXTS:
-            return p
-    return None
+    tracks = sorted(p for p in music_dir.iterdir() if p.suffix.lower() in _MUSIC_EXTS)
+    if not tracks:
+        return None
+
+    want = str(cfg["video"].get("music") or "").strip()
+    if want:
+        for p in tracks:
+            if p.name == want or p.stem == want:
+                return p
+        raise RuntimeError(
+            f"config video.music = '{want}' but no such track in {music_dir} "
+            f"(have: {', '.join(p.name for p in tracks)})"
+        )
+
+    slug = active_project() or ""
+    idx = int(hashlib.sha1(slug.encode()).hexdigest(), 16) % len(tracks)
+    return tracks[idx]
 
 
 def _concat(clips: list[Path], out: Path, cfg: dict[str, Any]) -> None:
