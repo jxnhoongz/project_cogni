@@ -154,6 +154,33 @@ def _edge_tts(
     asyncio.run(_run())
 
 
+def _text_stamp_path(out_path: Path) -> Path:
+    return out_path.with_suffix(".txt")
+
+
+def _stamp_audio_text(out_path: Path, text: str) -> None:
+    """Record the exact narration this mp3 was made from (staleness marker)."""
+    _text_stamp_path(out_path).write_text(text, encoding="utf-8")
+
+
+def _audio_matches(out_path: Path, text: str) -> bool:
+    """True only if the cached mp3 was generated from THIS narration text.
+
+    Caching on filename alone silently ships the wrong audio: regenerating a script
+    changes every beat's text but not `scene_007.mp3`, so `narrate` reports "cached"
+    and the video keeps the previous script's voiceover. (Hit for real — a rewritten
+    94-beat script reused 80 mp3s from the old 80-beat one, still naming the old
+    protagonist.) Audio with no stamp predates this check, so treat it as stale.
+    """
+    stamp = _text_stamp_path(out_path)
+    if not stamp.exists():
+        return False
+    try:
+        return stamp.read_text(encoding="utf-8") == text
+    except OSError:
+        return False
+
+
 def generate_tts(text: str, out_path: Path, cfg: dict[str, Any]) -> None:
     """Synthesize `text` to speech at out_path, per config tts.provider."""
     tts = cfg["tts"]
@@ -197,10 +224,11 @@ def narrate(*, force: bool = False, cfg: dict[str, Any] | None = None) -> Path:
         if not text.strip():
             print(f"[narrate] scene {s['id']:>2}: skipped (no narration text)")
             continue
-        if out.exists() and not force:
+        if out.exists() and not force and _audio_matches(out, text):
             cached += 1
         else:
             generate_tts(text, out, cfg)
+            _stamp_audio_text(out, text)
             made += 1
             print(f"[narrate] scene {s['id']:>2}: narrated")
         if s.get("audio_path") != rel:
