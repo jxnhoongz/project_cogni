@@ -39,3 +39,6 @@ Thumbs.db
 # Scratch + generated Remotion assets (regenerable, per-book)
 /scratchpad/
 /remotion/public/
+
+# Source books (PDF/EPUB) — large, and not ours to redistribute
+sources/

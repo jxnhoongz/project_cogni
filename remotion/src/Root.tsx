@@ -49,12 +49,14 @@ export const RemotionRoot: React.FC = () => {
         defaultProps={{ value: 60, prefix: "$", suffix: "K", kicker: "Comfort picked it", sub: "gone like a candle" }}
       />
       <Composition id="JuiceDemo" component={JuiceDemo} durationInFrames={750} fps={30} width={1920} height={1080} />
+      {/* Thumbnails for the ACTIVE book (Psychology of Money). Backgrounds live in
+          remotion/public/ — copy the chosen scene stills there before rendering. */}
       <Composition id="ThumbA" component={Thumbnail} durationInFrames={1} fps={30} width={1280} height={720}
-        defaultProps={{ bg: "tf_book.png", line1: "Read the book.", line2: "Still biased.", side: "left" as const }} />
+        defaultProps={{ bg: "pm_candle.png", line1: "$60,000.", line2: "Gone.", side: "left" as const }} />
       <Composition id="ThumbB" component={Thumbnail} durationInFrames={1} fps={30} width={1280} height={720}
-        defaultProps={{ bg: "tf_gut.png", line1: "Your gut lies.", line2: "Constantly.", side: "left" as const }} />
+        defaultProps={{ bg: "pm_face.png", line1: "Good advice.", line2: "Bad ending.", side: "left" as const }} />
       <Composition id="ThumbC" component={Thumbnail} durationInFrames={1} fps={30} width={1280} height={720}
-        defaultProps={{ bg: "tf_brain.png", line1: "Know the bias.", line2: "Fall for it anyway.", side: "left" as const }} />
+        defaultProps={{ bg: "pm_lambo.png", line1: "Comfort picked", line2: "the number.", side: "left" as const }} />
     </>
   );
 };
