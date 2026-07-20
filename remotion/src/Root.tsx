@@ -11,13 +11,12 @@ import { Thumbnail } from "./Thumbnail";
 // since finalize.py places Ch{n}.mov at each act's first beat (Ch1 skipped by default
 // so the card doesn't cover the hook).
 const CHAPTERS = [
-  "The Frozen Cursor",
-  "The Book That Said You're Not Dumb",
-  "Enough, and the Money You Can't See",
-  "A Tail Worth Chasing",
-  "Two Orders, No Rule",
-  "The Boring Fund Catches Him",
-  "Reasonable Is a Description, Not an Order",
+  "The Parking Lot",
+  "The Comfortable Nothing",
+  "My Cross to Carry",
+  "The Trick That Actually Works",
+  "Suffering Correctly",
+  "Let the Record Play",
 ];
 
 export const RemotionRoot: React.FC = () => {
@@ -44,9 +43,11 @@ export const RemotionRoot: React.FC = () => {
         fps={30}
         width={1920}
         height={1080}
-        // Lands on beat 68 — "Sixty thousand dollars. Gone." Numeric mode (not the word
-        // reveal): 60 + "K" suffix rather than 60000, which would overflow the 620px mask.
-        defaultProps={{ value: 60, prefix: "$", suffix: "K", kicker: "Comfort picked it", sub: "gone like a candle" }}
+        // Lands on beat 72 — "Six months in and she's still reaching for the pen." The
+        // motif is "six months", but "6 MONTHS" as prefix/suffix overflows the 620px
+        // mask, so the numeral alone fills it and the kicker/sub carry the phrase:
+        // "SHE SPENT / 6 / MONTHS MINING HER OWN PAIN".
+        defaultProps={{ value: 6, prefix: "", suffix: "", kicker: "She spent", sub: "months mining her own pain" }}
       />
       <Composition id="JuiceDemo" component={JuiceDemo} durationInFrames={750} fps={30} width={1920} height={1080} />
       {/* Thumbnails for the ACTIVE book (Psychology of Money). Backgrounds live in
