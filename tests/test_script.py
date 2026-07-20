@@ -163,3 +163,47 @@ def test_architect_prompt_blocks_used_names():
     )
     assert "Marcus Webb" in p          # the used name is fed in
     assert "different FIRST name" in p  # and the instruction to avoid it
+
+
+def _bible_min(**over):
+    b = {"protagonist": {"name": "X", "description": "d"},
+         "argument": {"claim": "c"},
+         "acts": [{"title": "1"}, {"title": "2"}, {"title": "3"}]}
+    b.update(over)
+    return b
+
+
+def test_validate_story_pins_payoff_when_architect_omits_it():
+    # off-vocabulary carries all coerce to "none"; without this invariant NO act would
+    # ever judge (every act prompt says only the payoff act does) -> script with no verdict
+    b = script._validate_story(_bible_min(acts=[
+        {"title": "1", "carries": "setup"}, {"title": "2", "carries": "the wager"},
+        {"title": "3", "carries": "the payoff"}]))
+    assert [a["carries"] for a in b["acts"]].count("payoff") == 1
+    assert b["acts"][-1]["carries"] == "payoff"
+
+
+def test_validate_story_keeps_explicit_payoff_act():
+    b = script._validate_story(_bible_min(acts=[
+        {"title": "1"}, {"title": "2", "carries": "payoff"}, {"title": "3"}]))
+    assert b["acts"][1]["carries"] == "payoff"
+    assert b["acts"][-1]["carries"] != "payoff"   # not double-assigned
+
+
+def test_validate_story_coerces_string_voice_moves():
+    b = script._validate_story(_bible_min(voice_moves="total recall"))
+    assert b["voice_moves"] == ["total recall"]   # not 12 single characters
+
+
+def test_validate_story_coerces_bare_string_ideas():
+    b = script._validate_story(_bible_min(acts=[
+        {"title": "1", "ideas": ["compounding", "margin of safety"]}, {"title": "2"}]))
+    assert b["acts"][0]["ideas"] == [{"idea": "compounding", "mode": "tool"},
+                                     {"idea": "margin of safety", "mode": "tool"}]
+
+
+def test_act_prompt_payoff_omits_empty_optional_clauses():
+    b = script._validate_story(_bible_min(acts=[{"title": "1"}, {"title": "2"}]))
+    p = script._build_act_prompt(OUTLINE, b, b["acts"][-1], 2, 2, ["a"], 10, 14)
+    assert "()" not in p and "—  —" not in p     # no empty parens / dangling dashes
+    assert '"c"' in p                             # the verdict still lands

@@ -119,17 +119,22 @@ def call_llm(
     # whole multi-call run (e.g. one bad act killing a 6-act script).
     attempts = 3 if json_out else 1
     last_err: Exception = RuntimeError("no LLM attempt was made")
-    for _ in range(attempts):
+    for n in range(1, attempts + 1):
         content = (_once() or "").strip()
         if not content:
             last_err = RuntimeError(f"LLM call to {provider}:{model} returned empty content")
-            continue
-        if not json_out:
+        elif not json_out:
             return content
-        try:
-            return _parse_json(content, model)
-        except RuntimeError as e:
-            last_err = e  # bad JSON — resample and try again
+        else:
+            try:
+                return _parse_json(content, model)
+            except RuntimeError as e:
+                last_err = e  # bad JSON — resample and try again
+        # Say so: each claude attempt can take up to _CLAUDE_TIMEOUT_SEC, so a silent
+        # retry looks like a hang (and hides *why* a run is slow).
+        if n < attempts:
+            print(f"[llm] {provider}:{model} gave unusable output ({last_err}); "
+                  f"resampling ({n + 1}/{attempts}) ...")
     raise last_err
 
 

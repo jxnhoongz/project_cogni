@@ -122,10 +122,10 @@ def _edge_tts(
 ) -> None:
     """Write the mp3 AND a word-synced .srt chunked into short phrases.
 
-    `rate` is an edge-tts speed offset like "-20%". It matters for runtime: Brian
-    defaults to ~230 wpm, which made book #4 land at 15:38 while book #1 (same word
-    count, ~183 wpm) ran 21 min. Slowing him is how we hit the ~20-min channel length
-    without padding the script. Subtitles come from the same call, so they stay synced.
+    `rate` is an edge-tts speed offset like "-20%" — the runtime lever: slow Brian down
+    instead of padding the script to hit the ~20-min channel length. Measured 2026-07-20:
+    his default is ~167 wpm and -20% gives ~133 wpm. Subtitles come from this same call,
+    so they stay in sync at any rate.
     """
     try:
         import edge_tts

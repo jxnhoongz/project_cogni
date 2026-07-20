@@ -29,7 +29,7 @@ _SYSTEM = (
     "You are Cognibot, narrator of a channel that reads books so lazy humans don't "
     "have to. You speak clear, natural, everyday English — never broken robot-speak "
     "(that lives only on the channel banner). You are blunt, a little funny, and you "
-    "TEACH: an honest point of view, a verdict, not a summary. You teach a book's ideas "
+    "TEACH: a real point of view, a verdict, not a summary. You teach a book's ideas "
     "by telling the story of one relatable person it applies to, and you judge the book "
     "as you go. You return only valid JSON."
 )
@@ -226,11 +226,19 @@ def _build_act_prompt(outline: dict[str, Any], bible: dict[str, Any], act: dict[
                  f"with '{w['book_claim_on_trial']}' on trial. Outcome: {w['outcome']}. If the book LOSES here, "
                  f"let it lose on-screen; do not rescue it. Real downside, real tension.")
     elif carries == "plant":
-        extra = f"\nTHIS act plants: {bible['plant']} — set it up so it can pay off later; don't underline it."
+        extra = ("\nTHIS act plants: " + (bible["plant"] or "the detail that pays off later")
+                 + " — set it up so it can pay off later; don't underline it.")
     elif carries == "payoff":
-        extra = (f"\nTHIS is where it all lands. Detonate the plant ({bible['payoff']}), then deliver the "
-                 f"WITHHELD verdict for the first time: \"{bible['argument']['claim']}\". End on the closing "
-                 f"scene — {bible['closing_scene']} — a concrete moment, NOT a 'who this is for' list.")
+        # every clause is optional in the bible, so only include the ones we actually have
+        # (otherwise this prompt reads "Detonate the plant ()" with a dangling em-dash).
+        bits = ["\nTHIS is where it all lands."]
+        if bible["payoff"]:
+            bits.append(f"Detonate the plant: {bible['payoff']}.")
+        bits.append(f"Then deliver the WITHHELD verdict for the first time: \"{bible['argument']['claim']}\".")
+        if bible["closing_scene"]:
+            bits.append(f"End on the closing scene — {bible['closing_scene']} — a concrete moment.")
+        bits.append("Do NOT end on a 'who this is for' list.")
+        extra = " ".join(bits)
     voice = ", ".join(bible["voice_moves"])
     return (
         f"Book: {outline['title']}\nThesis: {outline['thesis']}\n\n"
@@ -375,6 +383,15 @@ _MODES = {"tool", "obstacle", "failure", "discovery"}
 _CARRIES = {"wager", "plant", "payoff", "none"}
 
 
+def _as_str_list(v: Any) -> list[str]:
+    """Coerce a model-supplied list-of-strings, tolerating a single bare string."""
+    if isinstance(v, str):
+        v = [v]
+    if not isinstance(v, list):
+        return []
+    return [str(x).strip() for x in v if str(x).strip()]
+
+
 def _validate_story(story: dict[str, Any]) -> dict[str, Any]:
     """Validate + clean the Story Architect's output (the Story Bible)."""
     if not isinstance(story, dict):
@@ -396,9 +413,17 @@ def _validate_story(story: dict[str, Any]) -> dict[str, Any]:
     acts = []
     for i, a in enumerate(acts_in, 1):
         a = a if isinstance(a, dict) else {}
-        ideas = [{"idea": str(x.get("idea") or "").strip(),
-                  "mode": (str(x.get("mode") or "").strip() if str(x.get("mode") or "").strip() in _MODES else "tool")}
-                 for x in (a.get("ideas") or []) if isinstance(x, dict) and str(x.get("idea") or "").strip()]
+        ideas = []
+        for x in (a.get("ideas") or []):
+            # tolerate the shorthand `"ideas": ["compounding", ...]` — dropping bare
+            # strings silently stripped the book's ideas out of the act prompt.
+            if isinstance(x, str):
+                x = {"idea": x, "mode": "tool"}
+            if not isinstance(x, dict) or not str(x.get("idea") or "").strip():
+                continue
+            mode = str(x.get("mode") or "").strip()
+            ideas.append({"idea": str(x["idea"]).strip(),
+                          "mode": mode if mode in _MODES else "tool"})
         carries = str(a.get("carries") or "none").strip()
         acts.append({
             "title": str(a.get("title") or f"Act {i}").strip(),
@@ -407,6 +432,18 @@ def _validate_story(story: dict[str, Any]) -> dict[str, Any]:
             "ideas": ideas,
             "carries": carries if carries in _CARRIES else "none",
         })
+
+    # INVARIANT: exactly the payoff act is allowed to deliver the verdict (every act
+    # prompt says "only the payoff act judges"). If the architect phrased `carries`
+    # off-vocabulary, everything coerced to "none" above and NO act would ever judge —
+    # a full-length script with no verdict, silently. Pin it to the last act instead.
+    if not any(a["carries"] == "payoff" for a in acts):
+        acts[-1]["carries"] = "payoff"
+    # Same idea for the wager: without one, nothing puts the book on trial.
+    if not any(a["carries"] == "wager" for a in acts):
+        mid = next((a for a in acts[1:-1] if a["carries"] == "none"), None)
+        if mid is not None:
+            mid["carries"] = "wager"
     wager = story.get("wager") or {}
     out = str(wager.get("outcome") or "").strip()
     return {
@@ -419,6 +456,8 @@ def _validate_story(story: dict[str, Any]) -> dict[str, Any]:
         "payoff": str(story.get("payoff") or "").strip(),
         "closing_scene": str(story.get("closing_scene") or "").strip(),
         "opening_move": str(story.get("opening_move") or "").strip(),
-        "voice_moves": [str(v).strip() for v in (story.get("voice_moves") or []) if str(v).strip()],
+        # a bare string is iterable: without this, "total recall" became 12 one-character
+        # "voice moves" injected into every act prompt.
+        "voice_moves": _as_str_list(story.get("voice_moves")),
         "acts": acts,
     }
