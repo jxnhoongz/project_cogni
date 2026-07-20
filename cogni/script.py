@@ -50,8 +50,14 @@ _SCENE_RULES = (
 
 
 def _shapes_from_docs(docs: list[dict[str, Any]]) -> dict[str, list[str]]:
-    """Story-shapes already used by other books — to force variety."""
-    stances, openings, wagers = set(), set(), set()
+    """Story-shapes already used by other books — to force variety.
+
+    `names` matters as much as the rest: the writer defaults HARD to "Marcus" (books 1
+    and 3 both got one, and the architect reached for it again once the old name
+    blocklist was removed). Read the name from the story bible, falling back to the
+    legacy top-level `character` so pre-bible books still count.
+    """
+    stances, openings, wagers, names = set(), set(), set(), set()
     for d in docs:
         st = (d or {}).get("story") or {}
         if s := str((st.get("argument") or {}).get("stance") or "").strip():
@@ -60,7 +66,12 @@ def _shapes_from_docs(docs: list[dict[str, Any]]) -> dict[str, list[str]]:
             openings.add(o)
         if w := str((st.get("wager") or {}).get("book_claim_on_trial") or "").strip():
             wagers.add(w)
-    return {"stances": sorted(stances), "openings": sorted(openings), "wagers": sorted(wagers)}
+        nm = (str((st.get("protagonist") or {}).get("name") or "").strip()
+              or str(((d or {}).get("character") or {}).get("name") or "").strip())
+        if nm:
+            names.add(nm)
+    return {"stances": sorted(stances), "openings": sorted(openings),
+            "wagers": sorted(wagers), "names": sorted(names)}
 
 
 def _prior_story_shapes(cfg: dict[str, Any]) -> dict[str, list[str]]:
@@ -157,12 +168,14 @@ def _build_architect_prompt(outline: dict[str, Any], angle: str, lo_ch: int, hi_
                             minutes: int, shapes: dict[str, list[str]]) -> str:
     ideas = "\n".join(f"  - {k['title']}: {k['summary']}" for k in outline["key_ideas"])
     used = ""
-    if shapes.get("stances") or shapes.get("openings") or shapes.get("wagers"):
+    if any(shapes.get(k) for k in ("stances", "openings", "wagers", "names")):
         used = (
             "\nOther videos on this channel already used these — pick DIFFERENT ones:\n"
-            f"  - verdict stances used: {', '.join(shapes['stances']) or 'none'}\n"
-            f"  - opening moves used: {', '.join(shapes['openings']) or 'none'}\n"
-            f"  - claims already put on trial: {', '.join(shapes['wagers']) or 'none'}\n"
+            f"  - verdict stances used: {', '.join(shapes.get('stances') or []) or 'none'}\n"
+            f"  - opening moves used: {', '.join(shapes.get('openings') or []) or 'none'}\n"
+            f"  - claims already put on trial: {', '.join(shapes.get('wagers') or []) or 'none'}\n"
+            f"  - protagonist names used: {', '.join(shapes.get('names') or []) or 'none'} — give "
+            f"this one a clearly different FIRST name (do NOT reach for 'Marcus')\n"
         )
     return (
         f"Book: {outline['title']}"

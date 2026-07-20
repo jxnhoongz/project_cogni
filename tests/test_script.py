@@ -144,3 +144,22 @@ def test_generate_long_wires_architect_then_acts(monkeypatch):
     assert extra["chapters"] == ["Cold Open", "The Bet"]
     assert scenes[0]["chapter"] == "Cold Open" and scenes[1]["chapter"] == "The Bet"
     assert scenes[0]["id"] == 1 and scenes[1]["id"] == 2
+
+
+def test_shapes_collects_names_incl_legacy_character():
+    docs = [
+        {"story": {"protagonist": {"name": "Priya Menon"}}},          # new: from the bible
+        {"character": {"name": "Marcus Webb"}, "scenes": []},          # legacy: pre-bible book
+        {"scenes": []},                                                # neither — tolerated
+    ]
+    s = script._shapes_from_docs(docs)
+    assert set(s["names"]) == {"Priya Menon", "Marcus Webb"}
+
+
+def test_architect_prompt_blocks_used_names():
+    p = script._build_architect_prompt(
+        OUTLINE, "angle", 5, 7, 30,
+        {"stances": [], "openings": [], "wagers": [], "names": ["Marcus Webb"]},
+    )
+    assert "Marcus Webb" in p          # the used name is fed in
+    assert "different FIRST name" in p  # and the instruction to avoid it
