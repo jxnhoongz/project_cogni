@@ -118,8 +118,15 @@ def _edge_tts(
     out_path: Path,
     max_words: int = _SUB_MAX_WORDS,
     max_chars: int = _SUB_MAX_CHARS,
+    rate: str = "",
 ) -> None:
-    """Write the mp3 AND a word-synced .srt chunked into short phrases."""
+    """Write the mp3 AND a word-synced .srt chunked into short phrases.
+
+    `rate` is an edge-tts speed offset like "-20%". It matters for runtime: Brian
+    defaults to ~230 wpm, which made book #4 land at 15:38 while book #1 (same word
+    count, ~183 wpm) ran 21 min. Slowing him is how we hit the ~20-min channel length
+    without padding the script. Subtitles come from the same call, so they stay synced.
+    """
     try:
         import edge_tts
     except ImportError as e:
@@ -128,7 +135,8 @@ def _edge_tts(
     async def _run() -> None:
         # boundary="WordBoundary" (not the default SentenceBoundary) gives per-word
         # timings, so captions show a few words at a time rather than a whole line.
-        comm = edge_tts.Communicate(text, voice, boundary="WordBoundary")
+        kw = {"rate": rate} if rate else {}
+        comm = edge_tts.Communicate(text, voice, boundary="WordBoundary", **kw)
         words: list[tuple[float, float, str]] = []
         with open(out_path, "wb") as f:
             async for chunk in comm.stream():
@@ -157,6 +165,7 @@ def generate_tts(text: str, out_path: Path, cfg: dict[str, Any]) -> None:
             out_path,
             max_words=int(tts.get("subtitle_max_words", _SUB_MAX_WORDS)),
             max_chars=int(tts.get("subtitle_max_chars", _SUB_MAX_CHARS)),
+            rate=str(tts.get("rate", "") or ""),
         )
     else:
         raise RuntimeError(f"unknown tts provider '{provider}' (use 'edge')")

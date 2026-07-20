@@ -84,6 +84,11 @@ modes:
 tts:
   provider: "edge"
   voice: "en-US-BrianMultilingualNeural"   # Cognibot — casual, natural
+  # Speaking-rate offset (edge-tts), e.g. "-15%". This is the LENGTH LEVER: slow Brian
+  # down instead of padding the script. Measured 2026-07-20: Brian's default is ~167 wpm
+  # and -20% gives ~133 wpm. Leave empty unless a script comes up short — the 4,041-word
+  # Psychology of Money script already lands ~24 min at the default, so it needs no slowing.
+  rate: ""
   # Subtitles show a few words at a time (chunked from edge-tts word timings),
   # not a whole sentence. Lower these for shorter on-screen phrases.
   subtitle_max_words: 5
