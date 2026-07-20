@@ -7,13 +7,17 @@ import { JuiceChapter } from "./JuiceChapter";
 import { JuiceCountup } from "./JuiceCountup";
 import { Thumbnail } from "./Thumbnail";
 
+// The active book's acts, in order — these must match scenes.json `chapter` values,
+// since finalize.py places Ch{n}.mov at each act's first beat (Ch1 skipped by default
+// so the card doesn't cover the hook).
 const CHAPTERS = [
-  "The Guy Who Should Be Fine",
-  "Theo Meets the Boring Number",
-  "Dante's Watch",
-  "The Only Dial That Moves",
-  "The Bet He Almost Made",
-  "What Theo Actually Keeps",
+  "The Frozen Cursor",
+  "The Book That Said You're Not Dumb",
+  "Enough, and the Money You Can't See",
+  "A Tail Worth Chasing",
+  "Two Orders, No Rule",
+  "The Boring Fund Catches Him",
+  "Reasonable Is a Description, Not an Order",
 ];
 
 export const RemotionRoot: React.FC = () => {
@@ -40,7 +44,9 @@ export const RemotionRoot: React.FC = () => {
         fps={30}
         width={1920}
         height={1080}
-        defaultProps={{ word: "Enough", kicker: "The whole game is", sub: "a number that's yours" }}
+        // Lands on beat 68 — "Sixty thousand dollars. Gone." Numeric mode (not the word
+        // reveal): 60 + "K" suffix rather than 60000, which would overflow the 620px mask.
+        defaultProps={{ value: 60, prefix: "$", suffix: "K", kicker: "Comfort picked it", sub: "gone like a candle" }}
       />
       <Composition id="JuiceDemo" component={JuiceDemo} durationInFrames={750} fps={30} width={1920} height={1080} />
       <Composition id="ThumbA" component={Thumbnail} durationInFrames={1} fps={30} width={1280} height={720}

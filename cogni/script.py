@@ -190,8 +190,11 @@ def _build_architect_prompt(outline: dict[str, Any], angle: str, lo_ch: int, hi_
         f"{used}\n"
         f"Design the whole thing, then output it as JSON:\n"
         f"{{\n"
-        f'  "protagonist": {{"name": <string>, "description": <one sentence, recurring low-poly look with a '
-        f'clear face, non-photorealistic>, "wound": <one specific bit of history/shame that makes them care '
+        f'  "protagonist": {{"name": <string>, "description": <one sentence describing the recurring low-poly '
+        f'look. It MUST name, concretely: approximate age, SKIN TONE, hair colour+length, facial hair, and one '
+        f'signature garment. The image model re-invents anything you leave out — an unspecified skin tone '
+        f'produced a different-race protagonist mid-video — so no vague "a guy with a confident jaw". Clear '
+        f'low-poly face, never photorealistic>, "wound": <one specific bit of history/shame that makes them care '
         f'— keep it light, this stays a funny/useful channel>}},\n'
         f'  "argument": {{"stance": <"mostly-right" | "mostly-wrong" | "dangerously-half-right">, '
         f'"claim": <one sentence someone could disagree with, ABOUT THIS BOOK — the earned verdict>}},\n'
