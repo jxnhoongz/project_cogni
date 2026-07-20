@@ -29,8 +29,11 @@ _APP_HEADERS = {
     "HTTP-Referer": "https://github.com/jxnhoongz/project_cogni",
     "X-Title": "Project Cogni",
 }
-# Generous ceiling for a single `claude -p` call (Opus long-form can take a while).
-_CLAUDE_TIMEOUT_SEC = 300
+# Ceiling for a single `claude -p` call. Long-form stages send a whole book's worth of
+# scenes in ONE call — `visuals` on an 81-scene book blew straight through 300s and
+# aborted the run. Provider timeouts are NOT retried (only bad JSON is), so this ceiling
+# has to be generous enough for the biggest single pass rather than typical.
+_CLAUDE_TIMEOUT_SEC = 1200
 
 
 def _claude_env() -> dict[str, str] | None:
