@@ -272,6 +272,11 @@ def images(
     char_ref = _ensure_character_ref(cfg, character, images_dir, style)
     made = cached = referenced = 0
     changed = False
+    # A provider can refuse ONE prompt (Gemini IMAGE_SAFETY blocked a camp-imagery beat
+    # near the end of an 81-scene book). Aborting there threw away the whole pass, so we
+    # isolate per scene and still fail loudly at the end — the scenes that DID render stay
+    # on disk, so a re-run retries only the refusals instead of re-billing the book.
+    failures: list[tuple[int, str]] = []
     for s in scenes:
         # One still per scene. NB: we deliberately do NOT generate an end keyframe for
         # animate scenes — the cogni-animate skill drives motion from the single start
@@ -288,7 +293,12 @@ def images(
                 )
             full = _image_prompt(base, character, style)
             ref = char_ref if (char_ref and _shot_has_person(base, character)) else None
-            generate_image(full, start_out, cfg, label=f"Scene {s['id']}", ref=ref)
+            try:
+                generate_image(full, start_out, cfg, label=f"Scene {s['id']}", ref=ref)
+            except RuntimeError as e:
+                print(f"[images] scene {s['id']} FAILED: {e}")
+                failures.append((s["id"], str(e)))
+                continue
             made += 1
             referenced += 1 if ref else 0
         start_rel = str(start_out.relative_to(root_parent))
@@ -305,4 +315,10 @@ def images(
         )
     print(f"[images] provider={provider} — {made} generated ({referenced} character-locked), "
           f"{cached} cached ({len(scenes)} scenes) -> {images_dir}")
+    if failures:
+        detail = "\n".join(f"  scene {sid}: {err}" for sid, err in failures)
+        raise RuntimeError(
+            f"{len(failures)} scene(s) have no image (the rest are saved; re-running "
+            f"retries only these):\n{detail}"
+        )
     return images_dir
