@@ -36,31 +36,50 @@ def test_validate_scenes_still_works():
 
 def test_validate_story_ok():
     data = {"story": {
-        "protagonist": {"name": "Theo", "description": "tired man in teal", "wound": "watched his dad retire broke"},
-        "argument": {"stance": "dangerously-half-right", "claim": "Housel's patience is a luxury good"},
-        "wager": {"book_claim_on_trial": "just be patient", "decision": "bet the emergency fund on a tip", "outcome": "book-loses"},
-        "plant": "the aquarium trip", "payoff": "his kid ignores the watch",
-        "closing_scene": "Theo at the aquarium", "opening_move": "envy", "voice_moves": ["total recall"],
+        "hook_puzzles": ["why do you check your phone first", "why is your Sunday flat"],
+        "promise": "you'll see which sentence in this book is the dangerous one",
+        "author_story": "Frankl wrote it in nine days",
+        "recurring_figure": {"name": "Viktor Frankl", "description": "50s, pale, grey side-parted hair"},
+        "argument": {"stance": "dangerously-half-right", "claim": "the famous line curdles"},
+        "where_the_book_is_wrong": "he never saw the replication work",
+        "closing_image": "a book face-down on a windowsill", "voice_moves": ["total recall"],
         "acts": [
-            {"title": "A", "focus": "f", "role": "cold open", "ideas": [{"idea": "compounding", "mode": "obstacle"}], "carries": "none"},
-            {"title": "B", "focus": "g", "role": "final", "ideas": [], "carries": "payoff"},
+            {"title": "A", "focus": "f", "role": "cold open",
+             "ideas": [{"idea": "the will to meaning", "anchor": "16 million copies"}], "carries": "hook"},
+            {"title": "B", "focus": "g", "role": "final", "ideas": [], "carries": "verdict"},
         ],
     }}
     b = script._validate_story(data["story"])
-    assert b["protagonist"]["name"] == "Theo"
+    assert b["recurring_figure"]["name"] == "Viktor Frankl"
     assert b["argument"]["stance"] == "dangerously-half-right"
-    assert b["acts"][1]["carries"] == "payoff"
+    assert b["acts"][0]["carries"] == "hook" and b["acts"][1]["carries"] == "verdict"
+    assert b["acts"][0]["ideas"][0]["anchor"] == "16 million copies"
 
 
 def test_validate_story_defaults_optionals():
-    b = script._validate_story({
-        "protagonist": {"name": "X", "description": "d"},
-        "argument": {"claim": "c"},
-        "acts": [{"title": "1"}, {"title": "2"}],
-    })
-    assert b["protagonist"]["wound"] == ""
+    b = script._validate_story(_bible_min())
     assert b["voice_moves"] == []
-    assert b["acts"][0]["carries"] == "none" and b["acts"][0]["ideas"] == []
+    assert b["recurring_figure"] is None          # no figure is a legitimate shape
+    assert b["acts"][1]["carries"] == "none" and b["acts"][1]["ideas"] == []
+
+
+def test_validate_story_requires_hook_and_promise():
+    """The cold open IS the product: a bible without them would silently ship a script
+    with no reason to keep watching — the exact failure this format replaced."""
+    import pytest
+    b = _bible_min(); b.pop("hook_puzzles")
+    with pytest.raises(RuntimeError):
+        script._validate_story(b)
+    b = _bible_min(); b.pop("promise")
+    with pytest.raises(RuntimeError):
+        script._validate_story(b)
+
+
+def test_recurring_figure_needs_both_halves():
+    """A name with no description gives the image model nothing to lock onto — that is
+    how a protagonist changed race mid-video. Half a figure is no figure."""
+    b = script._validate_story(_bible_min(recurring_figure={"name": "Frankl", "description": ""}))
+    assert b["recurring_figure"] is None
 
 
 def test_validate_story_rejects_missing_argument_and_thin_acts():
@@ -73,55 +92,80 @@ def test_validate_story_rejects_missing_argument_and_thin_acts():
 
 def test_shapes_from_docs_collects_and_dedupes():
     docs = [
-        {"story": {"argument": {"stance": "mostly-right"}, "opening_move": "envy",
-                   "wager": {"book_claim_on_trial": "just be patient"}}},
-        {"story": {"argument": {"stance": "mostly-right"}, "opening_move": "crisis",
-                   "wager": {"book_claim_on_trial": "cut the lattes"}}},
-        {"scenes": []},  # old book, no story — tolerated
+        {"story": {"argument": {"stance": "mostly-right", "claim": "it oversells patience"},
+                   "hook_puzzles": ["why is your Sunday flat"]}},
+        {"story": {"argument": {"stance": "mostly-right", "claim": "it ignores luck"},
+                   "hook_puzzles": ["why do you refresh the app"]}},
+        {"story": {"opening_move": "envy"}},   # legacy book: pre-format bible
+        {"scenes": []},                         # older book, no story at all — tolerated
     ]
     s = script._shapes_from_docs(docs)
-    assert s["stances"] == ["mostly-right"]                 # deduped
-    assert set(s["openings"]) == {"crisis", "envy"}
-    assert "just be patient" in s["wagers"]
+    assert s["stances"] == ["mostly-right"]                       # deduped
+    assert "why is your Sunday flat" in s["hooks"]
+    assert "envy" in s["hooks"]                                    # legacy shape still counts
+    assert "it oversells patience" in s["claims"]
 
 
 def test_architect_prompt_demands_bible():
     p = script._build_architect_prompt(
         OUTLINE, "angle", 5, 7, 30,
-        {"stances": ["mostly-right"], "openings": ["envy"], "wagers": ["just be patient"]},
+        {"stances": ["mostly-right"], "hooks": ["envy"], "claims": ["it oversells patience"]},
     )
     assert "Cognibot" in p
-    for key in ('"argument"', '"wager"', '"plant"', '"payoff"', '"closing_scene"', '"acts"', '"wound"'):
+    for key in ('"hook_puzzles"', '"promise"', '"argument"', '"author_story"',
+                '"where_the_book_is_wrong"', '"recurring_figure"', '"acts"', '"anchor"'):
         assert key in p, key
-    assert "test" in p.lower() and "illustrat" in p.lower()      # test, don't illustrate
-    assert "mostly-right" in p and "envy" in p                    # variety: prior shapes fed in
-    assert "lose" in p.lower()                                    # the book can lose the wager
+    assert "second person" in p.lower()
+    assert "never invent" in p.lower()                  # no fictional characters
+    assert "mostly-right" in p and "envy" in p          # variety: prior shapes fed in
+
+
+def test_architect_prompt_demands_every_key_idea():
+    """Book #5 shipped 7 of 12 ideas. The idea count goes in the prompt so 'all of them'
+    is a number the model can be held to, not a vibe."""
+    outline = dict(OUTLINE, key_ideas=[{"title": f"idea {i}", "summary": "s"} for i in range(12)])
+    p = script._build_architect_prompt(outline, "angle", 5, 7, 30, {})
+    assert "ALL 12 key ideas" in p
 
 
 BIBLE = {
-    "protagonist": {"name": "Theo", "description": "tired man in a teal shirt", "wound": "watched his dad retire broke"},
+    "hook_puzzles": ["why is your Sunday flat", "why does the raise not land"],
+    "promise": "you'll see which sentence is the dangerous one",
+    "author_story": "he wrote it in nine days",
+    "recurring_figure": {"name": "Viktor Frankl", "description": "50s, pale, grey side-parted hair"},
     "argument": {"stance": "dangerously-half-right", "claim": "patience is a luxury good"},
-    "wager": {"book_claim_on_trial": "just be patient", "decision": "bet the emergency fund", "outcome": "book-loses"},
-    "plant": "the aquarium trip", "payoff": "his kid ignores the watch", "closing_scene": "Theo at the aquarium",
-    "opening_move": "crisis", "voice_moves": ["total recall"],
-    "acts": [{"title": "The Bet", "focus": "he risks the fund", "role": "the wager",
-              "ideas": [{"idea": "margin of safety", "mode": "failure"}], "carries": "wager"}],
+    "where_the_book_is_wrong": "the priming studies failed to replicate",
+    "closing_image": "a book face-down on a windowsill", "voice_moves": ["total recall"],
+    "acts": [{"title": "The Trap", "focus": "the idea bites", "role": "deliver ideas",
+              "ideas": [{"idea": "margin of safety", "anchor": "a 90% drawdown"}], "carries": "ideas"}],
 }
 
-def test_act_prompt_dramatizes_and_carries_wager():
+def test_act_prompt_is_second_person_and_forbids_invention():
     p = script._build_act_prompt(OUTLINE, BIBLE, BIBLE["acts"][0], 3, 6, ["Cold Open"], 10, 14)
-    assert "Theo" in p and "teal shirt" in p            # threads protagonist
-    assert "watched his dad retire broke" in p          # threads the wound
-    assert "margin of safety" in p                       # the act's idea
-    assert "dramatize" in p.lower() or "do not explain" in p.lower()
-    assert "wager" in p.lower() and "lose" in p.lower()  # this act carries the wager; book can lose
-    assert "honest" not in p.lower()                     # we don't tell it to be "honest" (the crutch)
+    assert "SECOND PERSON" in p
+    assert "INVENT NO ONE" in p                          # the whole point of the format change
+    assert "margin of safety" in p and "90% drawdown" in p   # idea + its concrete anchor
+    assert "Viktor Frankl" in p                           # the REAL recurring figure is threaded
+    assert "honest" not in p.lower()                      # we don't tell it to be "honest" (the crutch)
 
-def test_act_prompt_final_pays_off_verdict():
-    final = dict(BIBLE["acts"][0]); final["carries"] = "payoff"; final["role"] = "final"
+def test_act_prompt_hook_carries_puzzles_and_promise():
+    hook = dict(BIBLE["acts"][0]); hook["carries"] = "hook"
+    p = script._build_act_prompt(OUTLINE, BIBLE, hook, 1, 6, [], 10, 14)
+    assert "why is your Sunday flat" in p                 # the cascade
+    assert "he wrote it in nine days" in p                # the real author story
+    assert "which sentence is the dangerous one" in p     # the promise = reason to stay
+
+def test_act_prompt_where_wrong_uses_the_bot_flex():
+    ww = dict(BIBLE["acts"][0]); ww["carries"] = "where-wrong"
+    p = script._build_act_prompt(OUTLINE, BIBLE, ww, 5, 6, ["a"], 10, 14)
+    assert "failed to replicate" in p
+    assert "total recall" in p.lower()
+
+def test_act_prompt_final_delivers_verdict():
+    final = dict(BIBLE["acts"][0]); final["carries"] = "verdict"; final["role"] = "final"
     p = script._build_act_prompt(OUTLINE, BIBLE, final, 6, 6, ["a", "b"], 10, 14)
     assert "patience is a luxury good" in p              # the withheld argument lands here
-    assert "aquarium" in p.lower()                        # the closing scene
+    assert "windowsill" in p.lower()                      # the closing image
 
 
 def test_generate_long_wires_architect_then_acts(monkeypatch):
@@ -129,65 +173,77 @@ def test_generate_long_wires_architect_then_acts(monkeypatch):
     def fake_call_stage(cfg, stage, prompt, **kw):
         calls["n"] += 1
         if "ARCHITECTING" in prompt:                       # the architect pass
-            return {"protagonist": {"name": "Theo", "description": "teal shirt guy"},
+            return {"hook_puzzles": ["why is your Sunday flat"],
+                    "promise": "you'll see the dangerous sentence",
                     "argument": {"stance": "mostly-wrong", "claim": "the book oversells patience"},
-                    "wager": {"book_claim_on_trial": "be patient", "decision": "bet", "outcome": "book-loses"},
-                    "acts": [{"title": "Cold Open", "carries": "none"}, {"title": "The Bet", "carries": "wager"}]}
+                    "recurring_figure": {"name": "Frankl", "description": "grey side-parted hair"},
+                    "acts": [{"title": "Cold Open", "carries": "hook"},
+                             {"title": "The Trap", "carries": "verdict"}]}
         return {"scenes": [{"narration": "n", "on_screen_text": "", "image_prompt": "i"}]}
     monkeypatch.setattr(script, "call_stage", fake_call_stage)
-    monkeypatch.setattr(script, "_prior_story_shapes", lambda cfg: {"stances": [], "openings": [], "wagers": []})
+    monkeypatch.setattr(script, "_prior_story_shapes", lambda cfg: {"stances": [], "hooks": [], "claims": []})
     cfg = {"script": {"long": {"min_chapters": 2, "max_chapters": 2,
                                "min_scenes_per_chapter": 1, "max_scenes_per_chapter": 1, "target_minutes": 20}}}
     scenes, extra = script._generate_long(cfg, OUTLINE, "angle")
     assert calls["n"] == 3                                  # 1 architect + 2 acts
     assert extra["story"]["argument"]["claim"] == "the book oversells patience"
-    assert extra["chapters"] == ["Cold Open", "The Bet"]
-    assert scenes[0]["chapter"] == "Cold Open" and scenes[1]["chapter"] == "The Bet"
+    assert extra["chapters"] == ["Cold Open", "The Trap"]
+    # the doc-level `character` slot now carries the REAL recurring figure, so the
+    # existing image reference-locking keeps working without knowing anything changed
+    assert extra["character"] == {"name": "Frankl", "description": "grey side-parted hair"}
+    assert scenes[0]["chapter"] == "Cold Open" and scenes[1]["chapter"] == "The Trap"
     assert scenes[0]["id"] == 1 and scenes[1]["id"] == 2
 
 
-def test_shapes_collects_names_incl_legacy_character():
-    docs = [
-        {"story": {"protagonist": {"name": "Priya Menon"}}},          # new: from the bible
-        {"character": {"name": "Marcus Webb"}, "scenes": []},          # legacy: pre-bible book
-        {"scenes": []},                                                # neither — tolerated
-    ]
-    s = script._shapes_from_docs(docs)
-    assert set(s["names"]) == {"Priya Menon", "Marcus Webb"}
-
-
-def test_architect_prompt_blocks_used_names():
-    p = script._build_architect_prompt(
-        OUTLINE, "angle", 5, 7, 30,
-        {"stances": [], "openings": [], "wagers": [], "names": ["Marcus Webb"]},
-    )
-    assert "Marcus Webb" in p          # the used name is fed in
-    assert "different FIRST name" in p  # and the instruction to avoid it
+def test_generate_long_tolerates_no_recurring_figure(monkeypatch):
+    """Plenty of books have no person worth recurring. `images` must then simply skip
+    character-locking rather than crash."""
+    def fake_call_stage(cfg, stage, prompt, **kw):
+        if "ARCHITECTING" in prompt:
+            return {"hook_puzzles": ["why"], "promise": "p",
+                    "argument": {"claim": "c"},
+                    "acts": [{"title": "A", "carries": "hook"}, {"title": "B", "carries": "verdict"}]}
+        return {"scenes": [{"narration": "n", "on_screen_text": "", "image_prompt": "i"}]}
+    monkeypatch.setattr(script, "call_stage", fake_call_stage)
+    monkeypatch.setattr(script, "_prior_story_shapes", lambda cfg: {"stances": [], "hooks": [], "claims": []})
+    cfg = {"script": {"long": {"min_chapters": 2, "max_chapters": 2,
+                               "min_scenes_per_chapter": 1, "max_scenes_per_chapter": 1, "target_minutes": 20}}}
+    _, extra = script._generate_long(cfg, OUTLINE, "angle")
+    assert extra["character"] is None
 
 
 def _bible_min(**over):
-    b = {"protagonist": {"name": "X", "description": "d"},
+    b = {"hook_puzzles": ["why is your Sunday flat"],
+         "promise": "you'll see the dangerous sentence",
          "argument": {"claim": "c"},
          "acts": [{"title": "1"}, {"title": "2"}, {"title": "3"}]}
     b.update(over)
     return b
 
 
-def test_validate_story_pins_payoff_when_architect_omits_it():
+def test_validate_story_pins_verdict_when_architect_omits_it():
     # off-vocabulary carries all coerce to "none"; without this invariant NO act would
-    # ever judge (every act prompt says only the payoff act does) -> script with no verdict
+    # ever judge (every act prompt says only the verdict act does) -> script with no verdict
     b = script._validate_story(_bible_min(acts=[
-        {"title": "1", "carries": "setup"}, {"title": "2", "carries": "the wager"},
+        {"title": "1", "carries": "the opening"}, {"title": "2", "carries": "middle"},
         {"title": "3", "carries": "the payoff"}]))
-    assert [a["carries"] for a in b["acts"]].count("payoff") == 1
-    assert b["acts"][-1]["carries"] == "payoff"
+    assert [a["carries"] for a in b["acts"]].count("verdict") == 1
+    assert b["acts"][-1]["carries"] == "verdict"
+    assert b["acts"][0]["carries"] == "hook"      # and something must open
 
 
-def test_validate_story_keeps_explicit_payoff_act():
+def test_validate_story_keeps_explicit_verdict_act():
     b = script._validate_story(_bible_min(acts=[
-        {"title": "1"}, {"title": "2", "carries": "payoff"}, {"title": "3"}]))
-    assert b["acts"][1]["carries"] == "payoff"
-    assert b["acts"][-1]["carries"] != "payoff"   # not double-assigned
+        {"title": "1", "carries": "hook"}, {"title": "2", "carries": "verdict"}, {"title": "3"}]))
+    assert b["acts"][1]["carries"] == "verdict"
+    assert b["acts"][-1]["carries"] != "verdict"   # not double-assigned
+
+
+def test_validate_story_assigns_where_wrong_only_with_material():
+    b = script._validate_story(_bible_min(where_the_book_is_wrong="priming failed to replicate"))
+    assert [a["carries"] for a in b["acts"]].count("where-wrong") == 1
+    b2 = script._validate_story(_bible_min())          # no material -> no such act
+    assert "where-wrong" not in [a["carries"] for a in b2["acts"]]
 
 
 def test_validate_story_coerces_string_voice_moves():
@@ -198,11 +254,11 @@ def test_validate_story_coerces_string_voice_moves():
 def test_validate_story_coerces_bare_string_ideas():
     b = script._validate_story(_bible_min(acts=[
         {"title": "1", "ideas": ["compounding", "margin of safety"]}, {"title": "2"}]))
-    assert b["acts"][0]["ideas"] == [{"idea": "compounding", "mode": "tool"},
-                                     {"idea": "margin of safety", "mode": "tool"}]
+    assert b["acts"][0]["ideas"] == [{"idea": "compounding", "anchor": ""},
+                                     {"idea": "margin of safety", "anchor": ""}]
 
 
-def test_act_prompt_payoff_omits_empty_optional_clauses():
+def test_act_prompt_verdict_omits_empty_optional_clauses():
     b = script._validate_story(_bible_min(acts=[{"title": "1"}, {"title": "2"}]))
     p = script._build_act_prompt(OUTLINE, b, b["acts"][-1], 2, 2, ["a"], 10, 14)
     assert "()" not in p and "—  —" not in p     # no empty parens / dangling dashes

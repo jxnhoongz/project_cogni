@@ -76,7 +76,10 @@ script:
 # little for a lot of credits (~36 cr/clip). Keep this small: hook + a few punches.
 # Prefer animating SHORT beats (narration <= ~8s) so the clip covers the whole scene.
 modes:
-  max_animated: 4            # cap on MEDIUM+HIGH beats (each costs ~36 Higgsfield credits)
+  max_animated: 0            # 0 = no hero clips. Dropped after book #5: four Seedance
+                             # clips cost 189 credits and mostly read as slow zooms next
+                             # to the Ken Burns stills — not worth it. Credits now go to
+                             # image generation instead. Raise this to bring motion back.
 
 # --- Narration (scenes.json narration -> audio/scene_XXX.mp3) -----------------
 # provider "edge" -> edge-tts (free, no key). Voices e.g. en-GB-RyanNeural,
@@ -134,7 +137,8 @@ video:
   # from the book slug), so videos stop sharing one bed — the old code always took the
   # alphabetically-first file. Set a filename (e.g. "long_note_two.mp3") to pin one.
   # Prefer LONGER tracks for these ~22-min cuts: a 3-min track loops ~7x.
-  music: ""
+  music: "bittersweet.mp3"   # v2: auto-pick gave long_note_two, which book #4
+                             # already shipped. Set back to "" to resume auto-pick.
   fade_sec: 0.5
   subtitles: true            # burn synced subtitles from the narration (edge-tts timings)
   # Burned-subtitle look (Risograph theme). Colors are #RRGGBB.

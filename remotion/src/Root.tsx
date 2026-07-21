@@ -17,12 +17,13 @@ import { CREAM } from "./theme";
 const BOOK_TITLE = "MAN'S SEARCH FOR MEANING";
 
 const CHAPTERS = [
-  "The Parking Lot",
-  "The Comfortable Nothing",
-  "My Cross to Carry",
-  "The Trick That Actually Works",
-  "Suffering Correctly",
-  "Let the Record Play",
+  "The Sunday Feeling",
+  "The Man Who Refused the Visa",
+  "Two Races of Men",
+  "The Will to Meaning",
+  "The Doctor Who Sits Up",
+  "What the Dead Can't Tell You",
+  "The Coat on the Pile",
 ];
 
 export const RemotionRoot: React.FC = () => {
@@ -50,23 +51,26 @@ export const RemotionRoot: React.FC = () => {
         fps={30}
         width={1920}
         height={1080}
-        // Lands on beat 72 — "Six months in and she's still reaching for the pen." The
-        // motif is "six months", but "6 MONTHS" as prefix/suffix overflows the 620px
-        // mask, so the numeral alone fills it and the kicker/sub carry the phrase:
-        // "SHE SPENT / 6 / MONTHS MINING HER OWN PAIN".
-        // ink=CREAM: beat 72 is a dark teal wall, where the default TEAL ink vanished.
-        defaultProps={{ value: 6, prefix: "", suffix: "", kicker: "She spent", sub: "months mining her own pain", ink: CREAM }}
+        // Lands on beat 13 — he dictated the book in nine straight days. A count-up puts a
+        // number on screen as flat fact, so it must be one the BOOK supports: this one was
+        // checked against the text ("within nine successive days"). Don't graphic a figure
+        // the model recalled from training — that is how "sixteen million copies" got in.
+        // ink=CREAM: beat 13 is a dim Vienna interior; the default TEAL would vanish.
+        defaultProps={{ value: 9, prefix: "", suffix: "", kicker: "He dictated it in", sub: "nine straight days", ink: CREAM }}
       />
       <Composition id="JuiceDemo" component={JuiceDemo} durationInFrames={750} fps={30} width={1920} height={1080} />
       {/* Thumbnails for the ACTIVE book (Man's Search for Meaning). Backgrounds live in
           remotion/public/ — copy the chosen scene stills there before rendering.
           Keep each line under ~12 chars: 128px type overflows 1280 wide past that. */}
+      {/* Must read COLD. "SUFFER CORRECTLY." on book #5 only parsed if you'd already
+          watched the video — a payoff phrase, not a promise. Test each line against:
+          would a stranger scrolling past understand what this video claims? */}
       <Composition id="ThumbA" component={Thumbnail} durationInFrames={1} fps={30} width={1280} height={720}
-        defaultProps={{ bg: "msm_face.png", line1: "Suffer", line2: "correctly.", side: "left" as const }} />
+        defaultProps={{ bg: "v2_gate.png", line1: "Great book.", line2: "Bad science.", side: "left" as const }} />
       <Composition id="ThumbB" component={Thumbnail} durationInFrames={1} fps={30} width={1280} height={720}
-        defaultProps={{ bg: "msm_car.png", line1: "She obeyed", line2: "the book.", side: "right" as const }} />
+        defaultProps={{ bg: "v2_coats.png", line1: "He was right.", line2: "Just not why.", side: "right" as const }} />
       <Composition id="ThumbC" component={Thumbnail} durationInFrames={1} fps={30} width={1280} height={720}
-        defaultProps={{ bg: "msm_floor.png", line1: "It came when", line2: "she quit.", side: "right" as const }} />
+        defaultProps={{ bg: "v2_sunday.png", line1: "Why Sunday", line2: "feels empty.", side: "right" as const }} />
     </>
   );
 };

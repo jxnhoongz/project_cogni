@@ -5,11 +5,17 @@ summary — broken into scenes (narration + on_screen_text + image_prompt). Two 
 (config.yaml script.mode):
 
   - "short": one model pass, min/max_scenes scenes (~4-5 min). Fast, cheap; for tests.
-  - "long":  a Story Architect pass designs a story bible (protagonist, argument,
-             wager, acts), then ONE focused pass per act produces its scenes. Keeps
-             each call sharp while reaching a ~30-45 min deep-dive. Scenes are
-             concatenated with continuous ids; act titles are recorded on the doc
+  - "long":  an Architect pass designs a video bible (hook puzzles, promise, argument,
+             where the book is wrong, acts), then ONE focused pass per act produces its
+             scenes. Keeps each call sharp while reaching a ~30-45 min deep-dive. Scenes
+             are concatenated with continuous ids; act titles are recorded on the doc
              (as "chapters") and each scene; the full bible is recorded as "story".
+
+             The VIEWER is the protagonist — second person, no invented characters.
+             The earlier design followed a fictional person per book; it tested badly
+             (a listener A/B was decisive) and it starved the ideas: book #5 delivered
+             7 of 12 key ideas with 58% of runtime on invented story. Only real people
+             appear now — usually the author, carried in `recurring_figure`.
 
 Both modes emit the same per-scene schema, so every downstream stage (script-review,
 visuals, review, narrate, images, animate, assemble) works unchanged.
@@ -29,9 +35,11 @@ _SYSTEM = (
     "You are Cognibot, narrator of a channel that reads books so lazy humans don't "
     "have to. You speak clear, natural, everyday English — never broken robot-speak "
     "(that lives only on the channel banner). You are blunt, a little funny, and you "
-    "TEACH: a real point of view, a verdict, not a summary. You teach a book's ideas "
-    "by telling the story of one relatable person it applies to, and you judge the book "
-    "as you go. You return only valid JSON."
+    "TEACH: a real point of view, a verdict, not a summary. You address the VIEWER "
+    "directly as 'you' — the viewer is the protagonist, and you never invent a "
+    "fictional character to stand in for them. Your one unfair advantage is that you "
+    "hold the whole book at once and know what happened after it was published. "
+    "You return only valid JSON."
 )
 
 # Shared scene-writing rules, used by the short pass and every chapter pass.
@@ -41,10 +49,13 @@ _SCENE_RULES = (
     "never flatly summarize.\n"
     "- on_screen_text: a very short caption for the screen (<= 6 words), or \"\" if none.\n"
     "- image_prompt: describe ONE still image for THIS beat — the single concrete moment "
-    "being narrated right now, not the scene's whole idea. When a person appears it is the "
-    "recurring protagonist as a stylized, faceted LOW-POLY figure — a clear low-poly face "
-    "is good, never photorealistic; keep them the SAME person for continuity. Otherwise use "
-    "objects or symbolic imagery. Do not mention art style (added separately).\n"
+    "being narrated right now, not the scene's whole idea. Prefer objects, places, and "
+    "physical situations over talking heads. People may appear (the author, real historical "
+    "figures, or an anonymous everyday body — hands, a commuter, a crowd) as stylized, "
+    "faceted LOW-POLY figures; a clear low-poly face is good, never photorealistic. "
+    "NEVER render an idea as words, charts, labels, documents or signage — the image model "
+    "garbles text. Carry a concept with OBJECTS instead (coin stacks, not a graph). "
+    "Do not mention art style (added separately).\n"
     f"- {avoid_clause()}"
 )
 
@@ -57,21 +68,21 @@ def _shapes_from_docs(docs: list[dict[str, Any]]) -> dict[str, list[str]]:
     blocklist was removed). Read the name from the story bible, falling back to the
     legacy top-level `character` so pre-bible books still count.
     """
-    stances, openings, wagers, names = set(), set(), set(), set()
+    stances, hooks, claims = set(), set(), set()
     for d in docs:
         st = (d or {}).get("story") or {}
-        if s := str((st.get("argument") or {}).get("stance") or "").strip():
+        arg = st.get("argument") or {}
+        if s := str(arg.get("stance") or "").strip():
             stances.add(s)
+        if c := str(arg.get("claim") or "").strip():
+            claims.add(c[:120])
+        # new-format books carry hook_puzzles; legacy books carry opening_move. Read both
+        # so the older five still count toward "don't repeat yourself".
+        for h in _as_str_list(st.get("hook_puzzles"))[:1]:
+            hooks.add(h[:120])
         if o := str(st.get("opening_move") or "").strip():
-            openings.add(o)
-        if w := str((st.get("wager") or {}).get("book_claim_on_trial") or "").strip():
-            wagers.add(w)
-        nm = (str((st.get("protagonist") or {}).get("name") or "").strip()
-              or str(((d or {}).get("character") or {}).get("name") or "").strip())
-        if nm:
-            names.add(nm)
-    return {"stances": sorted(stances), "openings": sorted(openings),
-            "wagers": sorted(wagers), "names": sorted(names)}
+            hooks.add(o[:120])
+    return {"stances": sorted(stances), "hooks": sorted(hooks), "claims": sorted(claims)}
 
 
 def _prior_story_shapes(cfg: dict[str, Any]) -> dict[str, list[str]]:
@@ -167,93 +178,114 @@ def _generate_short(cfg: dict[str, Any], outline: dict[str, Any], angle: str):
 def _build_architect_prompt(outline: dict[str, Any], angle: str, lo_ch: int, hi_ch: int,
                             minutes: int, shapes: dict[str, list[str]]) -> str:
     ideas = "\n".join(f"  - {k['title']}: {k['summary']}" for k in outline["key_ideas"])
+    n_ideas = len(outline["key_ideas"])
     used = ""
-    if any(shapes.get(k) for k in ("stances", "openings", "wagers", "names")):
+    if any(shapes.get(k) for k in ("stances", "hooks", "claims")):
         used = (
             "\nOther videos on this channel already used these — pick DIFFERENT ones:\n"
             f"  - verdict stances used: {', '.join(shapes.get('stances') or []) or 'none'}\n"
-            f"  - opening moves used: {', '.join(shapes.get('openings') or []) or 'none'}\n"
-            f"  - claims already put on trial: {', '.join(shapes.get('wagers') or []) or 'none'}\n"
-            f"  - protagonist names used: {', '.join(shapes.get('names') or []) or 'none'} — give "
-            f"this one a clearly different FIRST name (do NOT reach for 'Marcus')\n"
+            f"  - openings used: {'; '.join(shapes.get('hooks') or []) or 'none'}\n"
+            f"  - verdicts already argued: {'; '.join(shapes.get('claims') or []) or 'none'}\n"
         )
     return (
         f"Book: {outline['title']}"
         + (f" by {outline['author']}" if outline.get("author") else "")
         + f"\nThesis: {outline['thesis']}\n\nKey ideas:\n{ideas}\n\n"
         f"Stance to hold (do NOT import a house opinion; make the verdict specific to THIS book):\n{angle}\n\n"
-        f"You are Cognibot, ARCHITECTING a ~{minutes}-minute video. Design a STORY, not a summary. "
-        f"The golden rule: TEST the book, don't ILLUSTRATE it. A protagonist who merely demonstrates each "
-        f"idea in order is a failure. Instead the protagonist must make a real decision where one of the "
-        f"book's central claims is on trial — and sometimes the book's advice must LOSE. The verdict is "
-        f"EARNED by that outcome, never asserted, and is WITHHELD until the end.\n"
+        f"You are Cognibot, ARCHITECTING a ~{minutes}-minute video.\n\n"
+        f"FORMAT — this is not negotiable:\n"
+        f"- The VIEWER is the protagonist. Second person, throughout. NEVER invent a fictional "
+        f"character; do not write 'meet Sarah, a marketing manager'. The only people who appear are "
+        f"REAL: the author, real historical figures, and the viewer.\n"
+        f"- OPEN with a cascade of concrete, sensory, second-person puzzles the viewer already feels, "
+        f"escalating from their own ordinary life to the question this book claims to answer. Each one "
+        f"opens a curiosity gap. No scene-setting, no story.\n"
+        f"- Then EARN trust with the real story of the book and its author — what actually happened.\n"
+        f"- Then make an explicit PROMISE: what you will unpack, and what the viewer will see "
+        f"differently afterwards. This is their reason to stay.\n"
+        f"- DELIVER THE IDEAS DENSELY. This video must carry ALL {n_ideas} key ideas listed above. "
+        f"Every idea gets a CONCRETE ANCHOR — a hard fact, number, object, or piece of history that "
+        f"makes it stick. An idea without an anchor is a platitude.\n"
+        f"- Near the end, a section on WHERE THE BOOK IS WRONG or what it could not see: research "
+        f"that came after it, claims that failed to survive, what the author later conceded. This is "
+        f"your unfair advantage — use it.\n"
+        f"- The VERDICT is withheld until the end, and it must be earned by the ideas, not asserted.\n"
         f"{used}\n"
         f"Design the whole thing, then output it as JSON:\n"
         f"{{\n"
-        f'  "protagonist": {{"name": <string>, "description": <one sentence describing the recurring low-poly '
-        f'look. It MUST name, concretely: approximate age, SKIN TONE, hair colour+length, facial hair, and one '
-        f'signature garment. The image model re-invents anything you leave out — an unspecified skin tone '
-        f'produced a different-race protagonist mid-video — so no vague "a guy with a confident jaw". Clear '
-        f'low-poly face, never photorealistic>, "wound": <one specific bit of history/shame that makes them care '
-        f'— keep it light, this stays a funny/useful channel>}},\n'
+        f'  "hook_puzzles": [<3-5 short, concrete, SECOND-PERSON puzzles for the cold open, escalating '
+        f'from the viewer\'s own life to the book\'s big question. Sensory and specific>],\n'
+        f'  "promise": <one sentence: what this video unpacks and what the viewer will see differently>,\n'
+        f'  "author_story": <the real, verifiable story of the author and how this book came to exist — '
+        f'the parts that are genuinely gripping. Facts only>,\n'
+        f'  "recurring_figure": {{"name": <a REAL person who genuinely recurs, usually the author — or '
+        f'null if none>, "description": <if named: one sentence of concrete low-poly look — approximate '
+        f'age, SKIN TONE, hair colour+length, facial hair, one signature garment. The image model '
+        f're-invents anything you leave out>}},\n'
         f'  "argument": {{"stance": <"mostly-right" | "mostly-wrong" | "dangerously-half-right">, '
         f'"claim": <one sentence someone could disagree with, ABOUT THIS BOOK — the earned verdict>}},\n'
-        f'  "wager": {{"book_claim_on_trial": <which claim the protagonist bets on>, "decision": <the real '
-        f'decision with a downside>, "outcome": <"book-wins" | "book-loses" | "mixed">}},\n'
-        f'  "plant": <something set up early>, "payoff": <how it detonates late>,\n'
-        f'  "closing_scene": <one concrete final moment that embodies the argument — a scene, not a '
-        f'"who it is for" list>,\n'
-        f'  "opening_move": <the KIND of cold open, different from the used ones above>,\n'
-        f'  "voice_moves": [<1-2 moves only a bot could make: total recall of the whole text, catching the '
-        f'book contradict itself>],\n'
+        f'  "where_the_book_is_wrong": <what the book could not see or got wrong, concretely — later '
+        f'research, a failed replication, an author who recanted, history that overtook it. "" if truly none>,\n'
+        f'  "closing_image": <one concrete final image or moment that embodies the verdict>,\n'
+        f'  "voice_moves": [<1-2 moves only a bot could make: total recall of the whole text, catching '
+        f'the book contradict itself, knowing what was published after it>],\n'
         f'  "acts": [{{"title": <short>, "focus": <1-2 sentences>, "role": <its job in the arc>, '
-        f'"ideas": [{{"idea": <which key idea>, "mode": <"tool" | "obstacle" | "failure" | "discovery">}}], '
-        f'"carries": <"wager" | "plant" | "payoff" | "none">}}, ...]\n'
+        f'"ideas": [{{"idea": <which key idea>, "anchor": <the concrete fact/object/number that makes '
+        f'it land>}}], "carries": <"hook" | "ideas" | "where-wrong" | "verdict" | "none">}}, ...]\n'
         f"}}\n"
-        f"Plan {lo_ch}-{hi_ch} acts. Exactly one act carries the wager, one the payoff; ideas may enter out "
-        f"of order. Act 1 is the cold open (the protagonist's problem as a live question — NOT the verdict)."
+        f"Plan {lo_ch}-{hi_ch} acts. Act 1 carries the hook. Exactly one act carries the verdict (last). "
+        f"If there is real material for it, one act carries where-wrong, just before the verdict. "
+        f"Spread ALL {n_ideas} key ideas across the acts — do not drop any."
     )
 
 
 def _build_act_prompt(outline: dict[str, Any], bible: dict[str, Any], act: dict[str, Any],
                       idx: int, total: int, prior_titles: list[str], lo_sc: int, hi_sc: int) -> str:
-    p = bible["protagonist"]
-    who = f"{p['name']} — {p['description']}" + (f" (wound: {p['wound']})" if p["wound"] else "")
-    ideas = "; ".join(f"{i['idea']} (enters as {i['mode']})" for i in act["ideas"]) or "(no new book idea this act)"
+    ideas = "; ".join(
+        f"{i['idea']}" + (f" (anchor it on: {i['anchor']})" if i.get("anchor") else "")
+        for i in act["ideas"]
+    ) or "(no new book idea this act)"
     prior = "; ".join(prior_titles) if prior_titles else "(this is the first act)"
     carries = act["carries"]
     extra = ""
-    if carries == "wager":
-        w = bible["wager"]
-        extra = (f"\nTHIS act carries the WAGER: {p['name']} makes this real decision — {w['decision']} — "
-                 f"with '{w['book_claim_on_trial']}' on trial. Outcome: {w['outcome']}. If the book LOSES here, "
-                 f"let it lose on-screen; do not rescue it. Real downside, real tension.")
-    elif carries == "plant":
-        extra = ("\nTHIS act plants: " + (bible["plant"] or "the detail that pays off later")
-                 + " — set it up so it can pay off later; don't underline it.")
-    elif carries == "payoff":
-        # every clause is optional in the bible, so only include the ones we actually have
-        # (otherwise this prompt reads "Detonate the plant ()" with a dangling em-dash).
-        bits = ["\nTHIS is where it all lands."]
-        if bible["payoff"]:
-            bits.append(f"Detonate the plant: {bible['payoff']}.")
-        bits.append(f"Then deliver the WITHHELD verdict for the first time: \"{bible['argument']['claim']}\".")
-        if bible["closing_scene"]:
-            bits.append(f"End on the closing scene — {bible['closing_scene']} — a concrete moment.")
+    if carries == "hook":
+        puzzles = "; ".join(bible["hook_puzzles"])
+        extra = (f"\nTHIS act is the COLD OPEN. Start on the puzzles — {puzzles} — in second person, "
+                 f"concrete and sensory, escalating. Then the real story of the book and its author: "
+                 f"{bible['author_story']}. Close the act on the PROMISE: {bible['promise']}. "
+                 f"Give the viewer an explicit reason to stay.")
+    elif carries == "where-wrong":
+        extra = (f"\nTHIS act is where the book does NOT hold up: {bible['where_the_book_is_wrong']}. "
+                 f"Be specific and fair — name what actually happened, and give the author credit where "
+                 f"they conceded it. This is the flex only a reader with total recall can make.")
+    elif carries == "verdict":
+        bits = ["\nTHIS is where it lands."]
+        bits.append(f"Deliver the WITHHELD verdict for the first time: \"{bible['argument']['claim']}\".")
+        bits.append("Earn it from the ideas already delivered — do not assert it cold.")
+        if bible["closing_image"]:
+            bits.append(f"End on: {bible['closing_image']} — one concrete image.")
         bits.append("Do NOT end on a 'who this is for' list.")
         extra = " ".join(bits)
     voice = ", ".join(bible["voice_moves"])
+    fig = bible.get("recurring_figure") or {}
+    fig_line = (f"A real recurring figure appears in this video: {fig['name']} — {fig['description']}. "
+                f"Use them only where they genuinely belong.\n" if fig.get("name") else "")
     return (
         f"Book: {outline['title']}\nThesis: {outline['thesis']}\n\n"
-        f"You are Cognibot, writing ONE act of a video that follows ONE protagonist: {who}. "
-        f"Keep this SAME person consistent. Acts already written: {prior}.\n\n"
-        f"Write ACT {idx} of {total}: \"{act['title']}\". Role in the arc: {act['role'] or '(continue the story)'}.\n"
-        f"Focus: {act['focus']}\nBook ideas this act uses: {ideas}.{extra}\n\n"
+        f"You are Cognibot, writing ONE act of a video addressed directly to the VIEWER. "
+        f"Acts already written: {prior}.\n{fig_line}\n"
+        f"Write ACT {idx} of {total}: \"{act['title']}\". Role in the arc: {act['role'] or '(continue)'}.\n"
+        f"Focus: {act['focus']}\nBook ideas this act must deliver: {ideas}.{extra}\n\n"
         f"RULES:\n"
-        f"- DRAMATIZE, do not explain. The protagonist ACTS, decides, or DISCOVERS the idea through friction — "
-        f"never step out to lecture the framework at the viewer.\n"
-        f"- Do NOT deliver the final verdict early. Middle acts raise questions; only the payoff act judges.\n"
-        f"- No 'here's my take on this stretch' summaries, no 'X years later' unless it earns a real scene.\n"
+        f"- SECOND PERSON. Talk to the viewer as 'you', constantly and concretely. The viewer is the "
+        f"protagonist of this video.\n"
+        f"- INVENT NO ONE. No fictional characters, no composite people, no 'imagine a woman named...'. "
+        f"Real people only: the author, real historical figures, and the viewer. If you need a human "
+        f"body for an example, it is the VIEWER'S ('you walk into...'), not a stranger's.\n"
+        f"- Every idea lands on its CONCRETE ANCHOR — a real fact, number, object, or piece of history. "
+        f"Explaining is fine; explaining without an anchor is not.\n"
+        f"- Do NOT deliver the final verdict early. Only the verdict act judges.\n"
+        f"- No 'here's my take on this stretch' summaries, no 'in this video' throat-clearing.\n"
         + (f"- Use a bot-only voice move where it fits: {voice} (a flex a human reviewer can't make).\n" if voice else "")
         + f"- Keep Cognibot blunt and funny; let specificity carry the bluntness (don't announce it).\n\n"
         f"Write {lo_sc}-{hi_sc} beats that flow as one continuous stretch — do NOT read the act title aloud. "
@@ -275,9 +307,13 @@ def _generate_long(cfg: dict[str, Any], outline: dict[str, Any], angle: str):
         _build_architect_prompt(outline, angle, lo_ch, hi_ch, minutes, _prior_story_shapes(cfg)),
         system=_SYSTEM, json_out=True,
     ))
-    character = bible["protagonist"]
+    # `character` is the doc-level recurring-look slot that `images` locks a reference
+    # portrait to. It is no longer an invented protagonist — it is a REAL person (usually
+    # the author) or None, in which case images simply skips character-locking.
+    character = bible["recurring_figure"]
     acts = bible["acts"]
-    print(f"[script] story bible ready — {character['name']}, {len(acts)} acts, "
+    who = character["name"] if character else "no recurring figure"
+    print(f"[script] video bible ready — {who}, {len(acts)} acts, "
           f"stance={bible['argument']['stance']}. Writing act by act ...")
 
     records: list[tuple[dict[str, Any], str]] = []
@@ -381,9 +417,13 @@ def _validate_character(data: dict[str, Any]) -> dict[str, str] | None:
 
 
 _STANCES = {"mostly-right", "mostly-wrong", "dangerously-half-right"}
-_OUTCOMES = {"book-wins", "book-loses", "mixed"}
-_MODES = {"tool", "obstacle", "failure", "discovery"}
-_CARRIES = {"wager", "plant", "payoff", "none"}
+# What job an act does. Replaces the old invented-story vocabulary (wager/plant/payoff):
+# the spine is now the book's own argument, not a fictional person's arc.
+#   hook       - the second-person puzzle cascade + the promise
+#   ideas      - delivers book ideas, each on a concrete anchor
+#   where-wrong- what the book could not see (published after it, or failed to survive)
+#   verdict    - the judgement, held until here
+_CARRIES = {"hook", "ideas", "where-wrong", "verdict", "none"}
 
 
 def _as_str_list(v: Any) -> list[str]:
@@ -399,10 +439,12 @@ def _validate_story(story: dict[str, Any]) -> dict[str, Any]:
     """Validate + clean the Story Architect's output (the Story Bible)."""
     if not isinstance(story, dict):
         raise RuntimeError("script(long): architect returned no story bible")
-    p = story.get("protagonist") or {}
-    name, desc = str(p.get("name") or "").strip(), str(p.get("description") or "").strip()
-    if not (name and desc):
-        raise RuntimeError("script(long): story bible has no named protagonist with a description")
+    puzzles = _as_str_list(story.get("hook_puzzles"))
+    if not puzzles:
+        raise RuntimeError("script(long): bible has no hook_puzzles (the cold open IS the hook)")
+    promise = str(story.get("promise") or "").strip()
+    if not promise:
+        raise RuntimeError("script(long): bible has no promise (the viewer's reason to stay)")
     arg = story.get("argument") or {}
     claim = str(arg.get("claim") or "").strip()
     if not claim:
@@ -421,12 +463,11 @@ def _validate_story(story: dict[str, Any]) -> dict[str, Any]:
             # tolerate the shorthand `"ideas": ["compounding", ...]` — dropping bare
             # strings silently stripped the book's ideas out of the act prompt.
             if isinstance(x, str):
-                x = {"idea": x, "mode": "tool"}
+                x = {"idea": x}
             if not isinstance(x, dict) or not str(x.get("idea") or "").strip():
                 continue
-            mode = str(x.get("mode") or "").strip()
             ideas.append({"idea": str(x["idea"]).strip(),
-                          "mode": mode if mode in _MODES else "tool"})
+                          "anchor": str(x.get("anchor") or "").strip()})
         carries = str(a.get("carries") or "none").strip()
         acts.append({
             "title": str(a.get("title") or f"Act {i}").strip(),
@@ -436,29 +477,35 @@ def _validate_story(story: dict[str, Any]) -> dict[str, Any]:
             "carries": carries if carries in _CARRIES else "none",
         })
 
-    # INVARIANT: exactly the payoff act is allowed to deliver the verdict (every act
-    # prompt says "only the payoff act judges"). If the architect phrased `carries`
-    # off-vocabulary, everything coerced to "none" above and NO act would ever judge —
-    # a full-length script with no verdict, silently. Pin it to the last act instead.
-    if not any(a["carries"] == "payoff" for a in acts):
-        acts[-1]["carries"] = "payoff"
-    # Same idea for the wager: without one, nothing puts the book on trial.
-    if not any(a["carries"] == "wager" for a in acts):
-        mid = next((a for a in acts[1:-1] if a["carries"] == "none"), None)
-        if mid is not None:
-            mid["carries"] = "wager"
-    wager = story.get("wager") or {}
-    out = str(wager.get("outcome") or "").strip()
+    # INVARIANTS: only the verdict act judges, and only the hook act opens. If the
+    # architect phrased `carries` off-vocabulary, everything coerced to "none" above and
+    # NO act would ever judge — a full-length script with no verdict, silently. Pin them.
+    if not any(a["carries"] == "verdict" for a in acts):
+        acts[-1]["carries"] = "verdict"
+    if not any(a["carries"] == "hook" for a in acts):
+        acts[0]["carries"] = "hook"
+    # where-wrong is the payoff flex, but only if the book actually gives us material.
+    where_wrong = str(story.get("where_the_book_is_wrong") or "").strip()
+    if where_wrong and not any(a["carries"] == "where-wrong" for a in acts):
+        late = next((a for a in reversed(acts[1:-1]) if a["carries"] == "none"), None)
+        if late is not None:
+            late["carries"] = "where-wrong"
+
+    fig_in = story.get("recurring_figure") or {}
+    fig_name = str(fig_in.get("name") or "").strip()
+    fig_desc = str(fig_in.get("description") or "").strip()
+    # Both halves or neither: a name with no description gives the image model nothing to
+    # lock onto, which is exactly how a protagonist changed race mid-video once.
+    figure = {"name": fig_name, "description": fig_desc} if (fig_name and fig_desc) else None
+
     return {
-        "protagonist": {"name": name, "description": desc, "wound": str(p.get("wound") or "").strip()},
+        "hook_puzzles": puzzles,
+        "promise": promise,
+        "author_story": str(story.get("author_story") or "").strip(),
+        "recurring_figure": figure,
         "argument": {"stance": stance, "claim": claim},
-        "wager": {"book_claim_on_trial": str(wager.get("book_claim_on_trial") or "").strip(),
-                  "decision": str(wager.get("decision") or "").strip(),
-                  "outcome": out if out in _OUTCOMES else "mixed"},
-        "plant": str(story.get("plant") or "").strip(),
-        "payoff": str(story.get("payoff") or "").strip(),
-        "closing_scene": str(story.get("closing_scene") or "").strip(),
-        "opening_move": str(story.get("opening_move") or "").strip(),
+        "where_the_book_is_wrong": where_wrong,
+        "closing_image": str(story.get("closing_image") or "").strip(),
         # a bare string is iterable: without this, "total recall" became 12 one-character
         # "voice moves" injected into every act prompt.
         "voice_moves": _as_str_list(story.get("voice_moves")),

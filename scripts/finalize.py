@@ -27,10 +27,10 @@ OUTRO = REPO / "remotion" / "out" / "outro.mp4"
 OVERLAY_SEC = 4.0
 
 # --- per-book knob: a count-up overlay at one scene (or None to skip) ----------
-# Man's Search for Meaning (81-beat cut): beat 72 is "Six months in and she's still
-# reaching for the pen" — the wager's cost named out loud. Beats 68 and 75 also say
-# "six months" but 68 is a chapter-card slot (Ch6) and 75 is an animated hero clip.
-COUNTUP_SCENE = 72            # scene id to place Countup.mov on (None = no count-up)
+# Man's Search for Meaning v2 (94-beat cut): beat 13 — he dictated the book in nine
+# straight days. A count-up states a number as flat fact, so only use one the BOOK
+# supports; this was checked against the text before it went on screen.
+COUNTUP_SCENE = 13            # scene id to place Countup.mov on (None = no count-up)
 
 
 def active_slug() -> str:
