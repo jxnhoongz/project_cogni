@@ -2,7 +2,9 @@ import React from "react";
 import { AbsoluteFill, Easing, interpolate, useCurrentFrame } from "remotion";
 import { CREAM, OCHRE, TEAL, fontFamily, Grain, Misreg } from "./theme";
 
-// ~6s outro (180 frames @ 30fps): wordmark + sign-off + subscribe CTA.
+// ~7s outro (210 frames @ 30fps): wordmark + sign-off + subscribe CTA.
+// Length is set by the baked-in Cognibot voice-over ("...that's how I feed my human"),
+// which runs 5.4s from a 0.5s offset — the fade must not start until it has landed.
 export const Outro: React.FC = () => {
   const f = useCurrentFrame();
   const ease = { easing: Easing.out(Easing.cubic), extrapolateLeft: "clamp" as const, extrapolateRight: "clamp" as const };
@@ -13,7 +15,7 @@ export const Outro: React.FC = () => {
   const rule = interpolate(f, [18, 38], [0, 380], ease);
   const cta = interpolate(f, [46, 62], [0, 1], clamp);
   const ctaY = interpolate(f, [46, 62], [24, 0], ease);
-  const out = interpolate(f, [156, 180], [1, 0], clamp);
+  const out = interpolate(f, [186, 210], [1, 0], clamp);
 
   return (
     <AbsoluteFill style={{ backgroundColor: CREAM, justifyContent: "center", alignItems: "center" }}>
