@@ -24,7 +24,13 @@ import json
 from typing import Any
 
 from .config import load_config, resolve_path
+from .ingest import _budget_text
 from .llm import call_stage
+
+# How many scenes to check per call. The book excerpt is resent with each batch, so
+# bigger batches are cheaper — but one call carrying 94 scenes plus 160k of book is the
+# shape that blew the CLI timeout on an 81-scene visuals pass.
+_SCENES_PER_CALL = 20
 
 # The book can be large; cap what we send. Opus has a big context, but this keeps the
 # call sane and fast. Long books are truncated (logged) — fact-check what fits.
@@ -38,18 +44,25 @@ _SYSTEM = (
 
 
 def load_book_excerpt(cfg: dict[str, Any], max_chars: int = _MAX_BOOK_CHARS) -> str:
-    """The book text for grounding, capped to max_chars (truncation logged)."""
+    """The book text for grounding, sampled evenly across the WHOLE book.
+
+    This used to take `text[:max_chars]` — the first 160k of a 306k book, i.e. barely
+    half. Everything the script drew from the back half then looked absent, so a true
+    claim about the ending would be flagged "not-in-book" while a fabrication about it
+    sailed through unchecked. Sampling evenly (the same helper `ingest` uses to read a
+    long book) means every part of the book is represented in the excerpt.
+    """
     book_path = resolve_path(cfg, "book_md")
     if not book_path.exists():
         raise FileNotFoundError(
             f"{book_path} not found — run `convert` first so fact-check has the book."
         )
     text = book_path.read_text(encoding="utf-8").strip()
-    if len(text) > max_chars:
-        print(f"[fact-check] book is {len(text)} chars; using the first {max_chars} "
-              "(fact-check only covers what fits).")
-        text = text[:max_chars]
-    return text
+    excerpt, sampled = _budget_text(text, max_chars)
+    if sampled:
+        print(f"[fact-check] book is {len(text)} chars; sampling {max_chars} evenly "
+              "across the whole book (gaps are marked [...]).")
+    return excerpt
 
 
 def _build_prompt(book: str, scenes: list[dict[str, Any]]) -> str:
@@ -131,16 +144,24 @@ def fact_review(*, force: bool = False, cfg: dict[str, Any] | None = None) -> di
     checked = [s["id"] for s in targets]
     if targets:
         book = load_book_excerpt(cfg)
-        print(f"[fact-check] grounding {len(targets)} scene(s) {checked} against the book (no credits) ...")
-        data = call_stage(
-            cfg, "fact_review", _build_prompt(book, scenes), system=_SYSTEM, json_out=True
-        )
-        by_id = _validate(data, {int(s["id"]) for s in scenes})
-        for s in targets:
-            s["fact_review"] = by_id[int(s["id"])]
-        scenes_path.write_text(
-            json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-        )
+        print(f"[fact-check] grounding {len(targets)} scene(s) against the book (no credits) ...")
+        # Batched: one call per _SCENES_PER_CALL scenes. Each batch is checked against
+        # the same book excerpt, and results are written back after EVERY batch — so a
+        # failure late in a long book keeps the work already done instead of losing it.
+        for i in range(0, len(targets), _SCENES_PER_CALL):
+            batch = targets[i : i + _SCENES_PER_CALL]
+            ids = {int(s["id"]) for s in batch}
+            print(f"[fact-check]   scenes {min(ids)}-{max(ids)} "
+                  f"({i // _SCENES_PER_CALL + 1}/{(len(targets) - 1) // _SCENES_PER_CALL + 1}) ...")
+            data = call_stage(
+                cfg, "fact_review", _build_prompt(book, batch), system=_SYSTEM, json_out=True
+            )
+            by_id = _validate(data, ids)
+            for s in batch:
+                s["fact_review"] = by_id[int(s["id"])]
+            scenes_path.write_text(
+                json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+            )
     else:
         print("[fact-check] nothing new to check — every scene already grounded "
               "(revise or edit a scene to re-check it, or use force to redo all).")
