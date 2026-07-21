@@ -77,3 +77,39 @@ def test_flagged_scenes_are_reported(tmp_path, monkeypatch):
     ]})
     out = fr.fact_review(cfg={})
     assert out["flagged"] == [2] and out["n_ok"] == 2
+
+
+# --- clearing false "not-in-book" flags -------------------------------------
+# Both fixtures are REAL output from the gate, checked against the real book.
+
+BOOK = ("we who have come back, by the aid of many lucky chances or miracles"
+        "—whatever one may choose to call them—we know: the best of us did not return. "
+        "I pointed to the roll of paper in the inner pocket of my coat.")
+
+# FALSE positive: the quote appears once in a 299k book and fell in a sampling gap.
+FALSE_FLAG = ("not-in-book: The direct quote 'the best of us did not return', attributed "
+              "to Frankl, does not appear anywhere in the provided book text.")
+
+# TRUE positive: the script invented the lining; the issue also quotes the book's real
+# wording second, which must NOT be what clears it.
+TRUE_FLAG = ("not-in-book: 'sewn into the lining was the only copy of his life's work' "
+             "— the book says the manuscript was carried in the 'inner pocket of my coat'.")
+
+
+def test_clears_false_not_in_book_flag():
+    assert fr.verify_not_in_book(FALSE_FLAG, fr._norm(BOOK)) is True
+
+
+def test_keeps_real_fabrication_even_though_it_quotes_the_book_second():
+    """The correction ('inner pocket of my coat') IS in the book. If we checked every
+    quoted span instead of the flagged one, every true flag would be deleted."""
+    assert fr.verify_not_in_book(TRUE_FLAG, fr._norm(BOOK)) is False
+
+
+def test_only_not_in_book_issues_are_clearable():
+    op = "unlabeled-opinion: 'the best of us did not return' stated as flat fact"
+    assert fr.verify_not_in_book(op, fr._norm(BOOK)) is False
+
+
+def test_norm_folds_smart_quotes_and_dashes():
+    assert fr._norm("The  Best—Of\nUs") == "the best-of us"

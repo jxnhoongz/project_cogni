@@ -16,11 +16,20 @@ A stance/verdict is fine — the channel is opinion, not summary — so honest c
 that's clearly the narrator's view is NOT flagged. It writes
 `scene["fact_review"] = {ok, issues}`; the `revise` step (script_review) can then
 rewrite flagged scenes with the book in context.
+
+TREAT THE OUTPUT AS A LEAD, NOT A VERDICT. Measured on book #5: two runs over the same
+script and the same (deterministic) excerpt returned 3 flags and then 0 — the variance
+is the model. So a clean pass is NOT proof of a clean script, and a flag is not proof
+of a problem: all 3 of those flags were false, and the quote they called fabricated is
+verbatim in the book. `verify_not_in_book` now clears that specific failure mode
+automatically, but nothing here can recover a fabrication the model didn't notice.
+Run it, read the flags, and check the surprising ones against the book yourself.
 """
 
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
 
 from .config import load_config, resolve_path
@@ -98,6 +107,41 @@ def _build_prompt(book: str, scenes: list[dict[str, Any]]) -> str:
     )
 
 
+_QUOTE_RE = re.compile(r"['‘’\"“”]([^'‘’\"“”]{12,240})['‘’\"“”]")
+
+
+def _norm(s: str) -> str:
+    """Fold the differences that make a real quote look absent: curly quotes, dashes,
+    case and whitespace. The book uses em-dashes and smart quotes; scripts don't."""
+    s = s.lower()
+    s = re.sub(r"[‘’“”]", "'", s)
+    s = re.sub(r"[‐-―−]", "-", s)
+    return re.sub(r"\s+", " ", s).strip()
+
+
+def verify_not_in_book(issue: str, full_book_norm: str) -> bool:
+    """True if this 'not-in-book' issue is a FALSE POSITIVE — i.e. the claim it quotes
+    really is in the book.
+
+    Why this exists: the excerpt sent to the model is sampled (160k of a 299k book), so
+    a line that appears exactly ONCE can land in a gap. That happened — the model
+    flagged Frankl's "the best of us did not return" across three beats as fabricated,
+    with a confident rationale, when it is verbatim in the text. Sampling can prove
+    presence, never absence, so absence is re-checked against the FULL book.
+
+    Only the FIRST quoted span is checked: that's the flagged claim. Later spans are
+    usually the correction ("the book actually says ..."), which IS in the book — using
+    those would delete every true flag.
+    """
+    if "not-in-book" not in issue.lower():
+        return False
+    m = _QUOTE_RE.search(issue)
+    if not m:
+        return False
+    claim = _norm(m.group(1))
+    return len(claim.split()) >= 4 and claim in full_book_norm
+
+
 def _validate(data: dict[str, Any], ids: set[int]) -> dict[int, dict[str, Any]]:
     scenes = data.get("scenes")
     if not isinstance(scenes, list) or not scenes:
@@ -144,6 +188,9 @@ def fact_review(*, force: bool = False, cfg: dict[str, Any] | None = None) -> di
     checked = [s["id"] for s in targets]
     if targets:
         book = load_book_excerpt(cfg)
+        # The FULL text (not the sampled excerpt) is what clears false "not-in-book"
+        # flags — sampling can prove a line is present, never that it is absent.
+        full_norm = _norm(resolve_path(cfg, "book_md").read_text(encoding="utf-8"))
         print(f"[fact-check] grounding {len(targets)} scene(s) against the book (no credits) ...")
         # Batched: one call per _SCENES_PER_CALL scenes. Each batch is checked against
         # the same book excerpt, and results are written back after EVERY batch — so a
@@ -158,7 +205,16 @@ def fact_review(*, force: bool = False, cfg: dict[str, Any] | None = None) -> di
             )
             by_id = _validate(data, ids)
             for s in batch:
-                s["fact_review"] = by_id[int(s["id"])]
+                r = by_id[int(s["id"])]
+                kept, cleared = [], []
+                for issue in r["issues"]:
+                    (cleared if verify_not_in_book(issue, full_norm) else kept).append(issue)
+                for c in cleared:
+                    # Loudly: a silently-dropped flag is indistinguishable from a gate
+                    # that isn't running.
+                    print(f"[fact-check]   scene {s['id']}: cleared a false 'not-in-book' "
+                          f"— the quoted line IS in the full book ({c[:80]}...)")
+                s["fact_review"] = {"ok": not kept, "issues": kept}
             scenes_path.write_text(
                 json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
             )
