@@ -23,17 +23,18 @@ and `main.py` imports `cogni.animate`→`httpx` at load. The venv has them.)
 | 8 | `narrate` | free | → `audio/scene_XXX.mp3` (+ `.srt`) via edge-tts (Brian voice) |
 | — | **CREDIT GATE** | — | `get_cost` preflight, quote the total, WAIT for explicit "go" (cogni-animate skill) |
 | 9 | `images` | see below | Three ways to buy the ~95 stills — pick per budget. STYLE.md is appended to every prompt automatically |
-| 10| `animate` (list) → generate | ~36 cr/clip | Higgsfield seedance_2_0 (standard, NOT fast). Only the ~4 tagged beats. **Dispatch subagents**, 3–4 in parallel per batch (firing all at once → 429). **Pass BOTH keyframes** — `medias` role `start_image` = scene_XXX.png, role `end_image` = scene_XXX_end.png (seedance_2_0 supports first-last-frame). Anchoring to both frames stops the clip drifting into a different scene (the recurring review flag) and lands it on a controlled last frame. Books 1–4 mistakenly used start-only and never fed the end frame |
+| 10| `animate` (list) → generate | 3.5 cr/sec | Higgsfield seedance_2_0, **720p + `mode: fast`** (52.5 cr for 15s). Only the ~4 tagged beats. **SINGLE start still** — `medias` role `start_image` = scene_XXX.png, plus the scene's `video_prompt` as a real camera move. Do NOT pass an end frame: near-identical start/end keyframes gave Seedance nothing to interpolate and **froze the clips** (`docs/motion.md`), which is why end stills were retired from `images`. Size each clip to its beat's `duration_sec` (min 5s, max 15s) so you don't buy footage that gets cut |
 | 11| `assemble --force` | free (nvenc) | → `output/final.mp4` (stills + Ken Burns + clips + narration + subtitles + music). Writes `duration_sec` back |
 | 12| **Remotion per-book** (see below) | free | chapter cards + intro/outro book title + optional count-up, rendered with ALPHA |
 | 13| `scripts/finalize.py` | free (nvenc) | juice overlays + intro/outro in ONE pass → `output/final_full.mp4` ← **the upload file** |
 | 14| thumbnail + `publish.md` | free | Remotion `Thumbnail` still + SEO/description/timestamps |
+| 15| **watch the cut** | free | See below — do NOT skip, and do NOT sample only the parts you changed |
 
 ## Step 9 — the three ways to get the stills
 
 | Route | Cost per book (~95 imgs) | Effort |
 |---|---|---|
-| **OpenRouter** (`config.yaml image.provider: openrouter`, `google/gemini-2.5-flash-image`) — just run `main.py images` | **~$4**, 0 credits | none |
+| **OpenRouter** (`config.yaml image.provider: openrouter`, `google/gemini-3.1-flash-lite-image`, "Nano Banana 2 Lite") — just run `main.py images` | **~$3.3**, 0 credits | none |
 | **Higgsfield API** — set provider/model to `nano_banana` (1 cr) or `nano_banana_pro` (2 cr) | **~95–190 credits**, $0 | none |
 | **Manual, web app** — free but hand-clicked (below) | **$0 and 0 credits** | ~2–3 hrs |
 
@@ -52,10 +53,15 @@ the wrong scene). The web "Unlimited" toggle is free but **web-only**: the API r
 
 ## Step 12 — Remotion (the per-book manual bits)
 
-The templates are built; only the text changes per book. In `remotion/src/`:
-- `Root.tsx` — set the `CHAPTERS` array to the new book's chapter titles (drives Ch1…ChN cards).
-- `Intro.tsx` / `Outro.tsx` — swap the book title ("RICH DAD POOR DAD").
-- (optional) a `Countup` beat if the book has a punchy number; set its scene + value.
+The templates are built; only the text changes per book. In `remotion/src/Root.tsx`:
+- **`BOOK_TITLE`** — the intro's title card. It sits directly above `CHAPTERS` because it
+  used to be hardcoded inside `Intro.tsx`, and book #5 shipped a cut that opened with book
+  #4's title card. **Changing it means nothing until you re-render `out/intro.mp4`** —
+  `finalize.py` concatenates that file as-is and will happily prepend a stale one.
+- `CHAPTERS` — the new book's chapter titles (drives Ch1…ChN cards). Count must match the
+  book's acts; a 6-act book leaves a stale Ch7 unused.
+- (optional) a `Countup` beat if the book has a punchy number; set its scene + value, and
+  pick `ink` to contrast with THAT beat's background (default TEAL vanishes on a dark one).
 
 Then render with ALPHA and copy into the project:
 ```
@@ -68,6 +74,28 @@ cp out/Ch*.mov out/Countup*.mov ../projects/<slug>/juice/
 ```
 `finalize.py` auto-places a chapter card at the first scene of each chapter (Ch1 skipped so it
 doesn't cover the hook). Edit its `JUICE_MAP_BASE` / `PROJ` for the new project + any count-up.
+
+## Step 15 — watch the cut before you call it done
+
+Sample the WHOLE runtime, not the bits you just edited. Book #5 was verified by checking
+chapter cards, the count-up and all four hero clips — every element that had been touched —
+and shipped with the previous book's intro, because the first five seconds were the one
+place assumed safe. **Anything reused from the last book is exactly what goes stale.**
+
+```bash
+F=projects/<slug>/output/final_full.mp4
+i=0; for T in 3.5 60 172 300 392 500 595 700 806 950 1021 1097 1200 1286; do
+  i=$((i+1)); ffmpeg -v error -y -ss $T -i "$F" -vframes 1 -vf scale=480:-1 \
+    "$SP/sheet_$(printf %02d $i).png"; done
+ffmpeg -v error -y -i "$SP/sheet_%02d.png" -filter_complex tile=3x5 -frames:v 1 "$SP/sheet.png"
+```
+
+Check: **the intro title card names THIS book**, chapter cards match `CHAPTERS`, the count-up
+is legible against its beat, the outro is present, the protagonist looks like one person.
+
+Seek gotcha: `-ss` BEFORE `-i` is fast but snaps to a keyframe — fine for "which book is
+this", useless for "is the overlay at the right timestamp". Put `-ss` AFTER `-i` for that
+(slow: it decodes from the start).
 
 ## The credit gate (never skip)
 

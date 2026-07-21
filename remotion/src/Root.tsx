@@ -11,6 +11,11 @@ import { CREAM } from "./theme";
 // The active book's acts, in order — these must match scenes.json `chapter` values,
 // since finalize.py places Ch{n}.mov at each act's first beat (Ch1 skipped by default
 // so the card doesn't cover the hook).
+// PER-BOOK KNOBS — retarget BOTH of these together when the active book changes.
+// The intro title used to be hardcoded inside Intro.tsx, which is how book #5 shipped
+// a cut that opened with book #4's title card.
+const BOOK_TITLE = "MAN'S SEARCH FOR MEANING";
+
 const CHAPTERS = [
   "The Parking Lot",
   "The Comfortable Nothing",
@@ -23,7 +28,8 @@ const CHAPTERS = [
 export const RemotionRoot: React.FC = () => {
   return (
     <>
-      <Composition id="Intro" component={Intro} durationInFrames={150} fps={30} width={1920} height={1080} />
+      <Composition id="Intro" component={Intro} durationInFrames={150} fps={30} width={1920} height={1080}
+        defaultProps={{ bookTitle: BOOK_TITLE }} />
       <Composition id="Outro" component={Outro} durationInFrames={180} fps={30} width={1920} height={1080} />
       {CHAPTERS.map((title, i) => (
         <Composition

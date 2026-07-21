@@ -3,7 +3,10 @@ import { AbsoluteFill, Easing, interpolate, useCurrentFrame } from "remotion";
 import { CREAM, OCHRE, TEAL, fontFamily, Grain, Misreg } from "./theme";
 
 // ~5s intro (150 frames @ 30fps): COGNIBOT + tagline, then the book title.
-export const Intro: React.FC = () => {
+// The title is a PROP, not a literal: it used to be hardcoded here, so book #5 shipped
+// with book #4's title card. It now lives beside CHAPTERS in Root.tsx — one place to
+// retarget per book.
+export const Intro: React.FC<{ bookTitle: string }> = ({ bookTitle }) => {
   const f = useCurrentFrame();
   const ease = { easing: Easing.out(Easing.cubic), extrapolateLeft: "clamp" as const, extrapolateRight: "clamp" as const };
   const clamp = { extrapolateLeft: "clamp" as const, extrapolateRight: "clamp" as const };
@@ -34,7 +37,7 @@ export const Intro: React.FC = () => {
           an honest verdict
         </div>
         <div style={{ display: "flex", justifyContent: "center" }}>
-          <Misreg size={82}>THE PSYCHOLOGY OF MONEY</Misreg>
+          <Misreg size={82}>{bookTitle}</Misreg>
         </div>
       </div>
 
