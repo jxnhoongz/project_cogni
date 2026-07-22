@@ -254,8 +254,40 @@ def test_validate_story_coerces_string_voice_moves():
 def test_validate_story_coerces_bare_string_ideas():
     b = script._validate_story(_bible_min(acts=[
         {"title": "1", "ideas": ["compounding", "margin of safety"]}, {"title": "2"}]))
-    assert b["acts"][0]["ideas"] == [{"idea": "compounding", "anchor": ""},
-                                     {"idea": "margin of safety", "anchor": ""}]
+    assert b["acts"][0]["ideas"] == [{"idea": "compounding", "puzzle": "", "anchor": ""},
+                                     {"idea": "margin of safety", "puzzle": "", "anchor": ""}]
+
+
+def test_validate_story_carries_puzzle_and_bridge():
+    """Puzzle-first is the watchability lever: each idea keeps its opening puzzle, and each
+    act keeps its bridge_out into the next. Both must survive validation to reach the prompt."""
+    b = script._validate_story(_bible_min(acts=[
+        {"title": "1", "ideas": [{"idea": "will to meaning",
+                                  "puzzle": "why did the man who preached meaning survive by luck?",
+                                  "anchor": "16 million copies"}],
+         "bridge_out": "but the line everyone quotes is the one that's most wrong"},
+        {"title": "2"}]))
+    idea = b["acts"][0]["ideas"][0]
+    assert idea["puzzle"].startswith("why did the man")
+    assert idea["anchor"] == "16 million copies"
+    assert b["acts"][0]["bridge_out"].startswith("but the line")
+
+
+def test_act_prompt_leads_with_puzzle_and_ends_on_bridge():
+    b = script._validate_story(_bible_min(acts=[
+        {"title": "The Trap", "carries": "ideas",
+         "ideas": [{"idea": "hyper-reflection",
+                    "puzzle": "try to fall asleep on command",
+                    "anchor": "the eye that sees itself is failing"}],
+         "bridge_out": "so where is meaning actually hiding?"},
+        {"title": "2", "carries": "verdict"}]))
+    p = script._build_act_prompt(OUTLINE, b, b["acts"][0], 3, 5, ["Cold Open"], 10, 14)
+    assert "PUZZLE-FIRST" in p                                   # the rule is present
+    assert "try to fall asleep on command" in p                  # the idea's puzzle is threaded
+    assert "so where is meaning actually hiding?" in p           # the bridge is threaded
+    # the verdict act must NOT be told to end on a bridge (it ends on the closing image)
+    pv = script._build_act_prompt(OUTLINE, b, b["acts"][1], 5, 5, ["a"], 10, 14)
+    assert "END this act on the bridge" not in pv
 
 
 def test_act_prompt_verdict_omits_empty_optional_clauses():

@@ -206,6 +206,12 @@ def _build_architect_prompt(outline: dict[str, Any], angle: str, lo_ch: int, hi_
         f"- DELIVER THE IDEAS DENSELY. This video must carry ALL {n_ideas} key ideas listed above. "
         f"Every idea gets a CONCRETE ANCHOR — a hard fact, number, object, or piece of history that "
         f"makes it stick. An idea without an anchor is a platitude.\n"
+        f"- PUZZLE-FIRST — this is the engine of watchability. Never state an idea and then explain it. "
+        f"Every idea ENTERS as a concrete, second-person QUESTION or PARADOX the viewer cannot answer — "
+        f"'why does your fridge have a light but your freezer doesn't?' — held open for a beat, THEN paid "
+        f"off. The question comes BEFORE the answer, always. For a book with no trivia, the puzzle is a "
+        f"TENSION the viewer feels in their own life (e.g. 'why did the man who preached that meaning "
+        f"saves you survive by pure luck?'). Give each idea its `puzzle`.\n"
         f"- Near the end, a section on WHERE THE BOOK IS WRONG or what it could not see: research "
         f"that came after it, claims that failed to survive, what the author later conceded. This is "
         f"your unfair advantage — use it.\n"
@@ -230,22 +236,29 @@ def _build_architect_prompt(outline: dict[str, Any], angle: str, lo_ch: int, hi_
         f'  "voice_moves": [<1-2 moves only a bot could make: total recall of the whole text, catching '
         f'the book contradict itself, knowing what was published after it>],\n'
         f'  "acts": [{{"title": <short>, "focus": <1-2 sentences>, "role": <its job in the arc>, '
-        f'"ideas": [{{"idea": <which key idea>, "anchor": <the concrete fact/object/number that makes '
-        f'it land>}}], "carries": <"hook" | "ideas" | "where-wrong" | "verdict" | "none">}}, ...]\n'
+        f'"ideas": [{{"idea": <which key idea>, "puzzle": <the concrete second-person QUESTION or paradox '
+        f'that OPENS this idea, before any answer>, "anchor": <the concrete fact/object/number that makes '
+        f'it land>}}], "bridge_out": <one line ending the act: synthesise what just landed, then pose the '
+        f'next act as an open question — the cliffhanger that carries the viewer across the seam>, '
+        f'"carries": <"hook" | "ideas" | "where-wrong" | "verdict" | "none">}}, ...]\n'
         f"}}\n"
         f"Plan {lo_ch}-{hi_ch} acts. Act 1 carries the hook. Exactly one act carries the verdict (last). "
         f"If there is real material for it, one act carries where-wrong, just before the verdict. "
-        f"Spread ALL {n_ideas} key ideas across the acts — do not drop any."
+        f"Order acts so scope escalates — outward objects toward the viewer's own mind — where the "
+        f"material allows. Spread ALL {n_ideas} key ideas across the acts — do not drop any."
     )
 
 
 def _build_act_prompt(outline: dict[str, Any], bible: dict[str, Any], act: dict[str, Any],
                       idx: int, total: int, prior_titles: list[str], lo_sc: int, hi_sc: int) -> str:
     ideas = "; ".join(
-        f"{i['idea']}" + (f" (anchor it on: {i['anchor']})" if i.get("anchor") else "")
+        f"{i['idea']}"
+        + (f" [OPEN on the puzzle: {i['puzzle']}]" if i.get("puzzle") else "")
+        + (f" (anchor: {i['anchor']})" if i.get("anchor") else "")
         for i in act["ideas"]
     ) or "(no new book idea this act)"
     prior = "; ".join(prior_titles) if prior_titles else "(this is the first act)"
+    bridge = str(act.get("bridge_out") or "").strip()
     carries = act["carries"]
     extra = ""
     if carries == "hook":
@@ -279,6 +292,9 @@ def _build_act_prompt(outline: dict[str, Any], bible: dict[str, Any], act: dict[
         f"RULES:\n"
         f"- SECOND PERSON. Talk to the viewer as 'you', constantly and concretely. The viewer is the "
         f"protagonist of this video.\n"
+        f"- PUZZLE-FIRST. Open each idea on its puzzle — the concrete second-person question or paradox — "
+        f"and make the viewer feel the not-knowing before you resolve it. Never state the idea then "
+        f"explain; pose the question, sit in it, THEN pay it off. This is what makes it watchable.\n"
         f"- INVENT NO ONE. No fictional characters, no composite people, no 'imagine a woman named...'. "
         f"Real people only: the author, real historical figures, and the viewer. If you need a human "
         f"body for an example, it is the VIEWER'S ('you walk into...'), not a stranger's.\n"
@@ -286,6 +302,8 @@ def _build_act_prompt(outline: dict[str, Any], bible: dict[str, Any], act: dict[
         f"Explaining is fine; explaining without an anchor is not.\n"
         f"- Do NOT deliver the final verdict early. Only the verdict act judges.\n"
         f"- No 'here's my take on this stretch' summaries, no 'in this video' throat-clearing.\n"
+        + (f"- END this act on the bridge — {bridge} — a synthesise-then-open-question hook into what's "
+           f"next; do not just stop.\n" if bridge and carries not in ("verdict",) else "")
         + (f"- Use a bot-only voice move where it fits: {voice} (a flex a human reviewer can't make).\n" if voice else "")
         + f"- Keep Cognibot blunt and funny; let specificity carry the bluntness (don't announce it).\n\n"
         f"Write {lo_sc}-{hi_sc} beats that flow as one continuous stretch — do NOT read the act title aloud. "
@@ -467,6 +485,7 @@ def _validate_story(story: dict[str, Any]) -> dict[str, Any]:
             if not isinstance(x, dict) or not str(x.get("idea") or "").strip():
                 continue
             ideas.append({"idea": str(x["idea"]).strip(),
+                          "puzzle": str(x.get("puzzle") or "").strip(),
                           "anchor": str(x.get("anchor") or "").strip()})
         carries = str(a.get("carries") or "none").strip()
         acts.append({
@@ -474,6 +493,7 @@ def _validate_story(story: dict[str, Any]) -> dict[str, Any]:
             "focus": str(a.get("focus") or "").strip(),
             "role": str(a.get("role") or "").strip(),
             "ideas": ideas,
+            "bridge_out": str(a.get("bridge_out") or "").strip(),
             "carries": carries if carries in _CARRIES else "none",
         })
 

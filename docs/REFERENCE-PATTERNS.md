@@ -74,3 +74,84 @@ They deliver roughly **twice the ideas in 5 fewer minutes**.
 - Second person as a script constraint, measurable (`you`/min) like our other gates.
 - An idea-coverage gate: `ingest` already extracts ~12 key ideas; count how many the
   final script actually delivers. Book #5 delivered 7, three of them the same contrast.
+
+---
+
+# 成长书库 — 《牛奶可乐经济学》 (33:20) — the closest peer
+
+Second teardown. This is the channel the user calls "basically ours but Chinese," at
+nearly our runtime (33:20 vs our v2 26:45). Full script: `research/transcripts/
+chengzhang_ref01_SCRIPT.md`. The user watched the whole thing and it held their interest —
+so the job here is to find WHY, structurally, and adopt it.
+
+## The architecture: a fractal of puzzle-chains
+
+The whole 33 min is **7 sections**, each with the IDENTICAL internal shape:
+
+    3-4 concrete puzzles  →  each puzzle: "why is X?" then the economic principle
+                          →  section SYNTHESIS (one line tying the examples together)
+                          →  BRIDGE to next section (synthesize + escalate + re-hook)
+
+Sections, in order — note the scope moving steadily INWARD:
+1. **Product design** (0:42) — milk box vs coke bottle, fridge light, shirt buttons
+2. **"Free" traps** (6:00) — bar peanuts, bundled software, "no receipt = free meal"
+3. **Your wages** (11:18) — model pay, waiter vs chef, low-performers overpaid
+4. **Price discrimination** (15:53) — hidden Starbucks cup, dented appliances, hotel wifi
+5. **Involution / commons** (20:21) — high heels, school uniforms, cherry tree, antibiotics
+6. **Information games** (24:54) — used-car lemons, lawyers' luxury cars, academic jargon
+7. **Your own irrationality** (30:04) — splitting the bill, taxi drivers quitting in rain
+
+Objects "out there" → you as consumer → your income → your society → your own mind. The
+final section turns the lens on the viewer. That escalation is the spine.
+
+## The 5 techniques worth stealing (ranked)
+
+1. **PUZZLE DENSITY. ~22 puzzles in 33 min — one "why?" every ~90 seconds.** Every single
+   idea enters as a concrete anomaly ("why is milk square but coke round?") and only THEN
+   gets the principle. Never definition-first, not once in 33 minutes. This is the engine
+   of the whole thing. Our v2 anchors ideas on facts — this goes further: the anchor is a
+   QUESTION the viewer can't answer, posed before the idea.
+
+2. **EXPLICIT SECTION TRANSITIONS that do three jobs at once** (there are 6, ~every 5 min):
+   synthesize what just happened in one line, ESCALATE ("if you think calculating product
+   cost is clever, you underestimate them — they don't just calculate products, they
+   calculate YOU"), then pose the next section as a cliffhanger. This is the "suspension
+   bridge / open loop" retention move, done deliberately at every seam. It's the single
+   biggest reason a 33-min video doesn't sag.
+
+3. **THE HOOK'S PUZZLES PAY OFF FAST.** The cold open poses 3 (milk/coke, buttons, bar
+   peanuts); milk/coke + buttons are answered within §1, peanuts opens §2. The viewer gets
+   closure in the first ~5 min — that earned trust is what buys the next 28.
+
+4. **ESCALATING INWARD SCOPE** (the section order above). Not 7 parallel topics — a
+   widening/deepening lens ending on the viewer's own mind. Gives a 33-min video an arc.
+
+5. **RE-ANCHORING at each section start.** Every section opens by recapping the previous
+   one in a sentence before starting ("last part we dissected the price traps; now...").
+   For a long video a drifting viewer can re-board. (Theirs is near-verbatim repetition —
+   a stitched-segment tell; we'd do a lighter one-line version.)
+
+## What we already do (v2)
+
+Second person, concrete anchors, no invented characters, ideas each on a fact. The format
+rewrite got us onto the same road. The gap is the DENSITY and the TRANSITIONS above.
+
+## The one thing they DON'T do — and it's our differentiator
+
+**They never judge the book.** The conclusion is celebratory ("this book gives you x-ray
+vision"), never critical — no "here's where it's wrong" section. That's the 成长书库 =
+summary-channel signature: brilliant organization, zero adversarial stance. The user found
+it engaging anyway, which proves the engagement comes from STRUCTURE, not from a verdict.
+So: adopt their puzzle-chain engine AND keep Cognibot's verdict + `where-the-book-is-wrong`
+act. Structure for retention, verdict for differentiation. We can be both.
+
+## Concrete pipeline changes (for `cogni/script.py` architect)
+
+- **Add a `puzzle` field per idea** alongside `anchor`: the "why is X?" question that opens
+  it. Make the act writer LEAD with the puzzle, then answer. Target ~one puzzle/90s.
+- **Make section transitions a first-class thing.** Each act should END on a synthesize +
+  escalate + next-question bridge, and OPEN with a one-line recap. Add `bridge_out` to the
+  act schema; it's currently implicit and inconsistent.
+- **Order acts by escalating scope** where the material allows — outward objects to the
+  viewer's own mind — and say so in the architect prompt.
+- Keep `where-the-book-is-wrong` + `verdict`. Their absence is exactly our edge.
