@@ -68,11 +68,11 @@ export const RemotionRoot: React.FC = () => {
           watched the video — a payoff phrase, not a promise. Test each line against:
           would a stranger scrolling past understand what this video claims? */}
       <Composition id="ThumbA" component={Thumbnail} durationInFrames={1} fps={30} width={1280} height={720}
-        defaultProps={{ bg: "v2_gate.png", line1: "Great book.", line2: "Bad science.", side: "left" as const }} />
+        defaultProps={{ bg: "fk_bug.png", line1: "Great book.", line2: "One big bug.", side: "left" as const }} />
       <Composition id="ThumbB" component={Thumbnail} durationInFrames={1} fps={30} width={1280} height={720}
-        defaultProps={{ bg: "v2_coats.png", line1: "He was right.", line2: "Just not why.", side: "right" as const }} />
+        defaultProps={{ bg: "fk_pool.png", line1: "Your pool", line2: "beats your gun.", side: "left" as const }} />
       <Composition id="ThumbC" component={Thumbnail} durationInFrames={1} fps={30} width={1280} height={720}
-        defaultProps={{ bg: "v2_sunday.png", line1: "Why Sunday", line2: "feels empty.", side: "right" as const }} />
+        defaultProps={{ bg: "fk_sumo.png", line1: "Sumo is", line2: "rigged.", side: "right" as const }} />
     </>
   );
 };

@@ -137,8 +137,7 @@ video:
   # from the book slug), so videos stop sharing one bed — the old code always took the
   # alphabetically-first file. Set a filename (e.g. "long_note_two.mp3") to pin one.
   # Prefer LONGER tracks for these ~22-min cuts: a 3-min track loops ~7x.
-  music: "bittersweet.mp3"   # v2: auto-pick gave long_note_two, which book #4
-                             # already shipped. Set back to "" to resume auto-pick.
+  music: ""                  # per-book auto-pick (hashed from slug); name a file to pin
   fade_sec: 0.5
   subtitles: true            # burn synced subtitles from the narration (edge-tts timings)
   # Burned-subtitle look (Risograph theme). Colors are #RRGGBB.
