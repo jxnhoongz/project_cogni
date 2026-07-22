@@ -193,6 +193,23 @@ def _shot_has_person(prompt: str, character: dict[str, Any] | None) -> bool:
     return bool(_PERSON_RE.search(prompt))
 
 
+def _is_figure_beat(narration: str, prompt: str, character: dict[str, Any] | None) -> bool:
+    """Is THIS beat actually about the recurring figure — or just any beat with a person?
+
+    In the new format the recurring figure is a REAL person (usually the author), not an
+    invented protagonist who appears in every scene. So "does the shot contain a person?"
+    is the wrong test: it forced the author into every crowd, kitchen, and street. The
+    author's face only belongs where the beat is genuinely about THEM — their name (or
+    surname) in the narration or the prompt. Everyone else is an anonymous body.
+    """
+    name = ((character or {}).get("name") or "").strip()
+    if not name:
+        return False
+    surname = name.split()[-1]
+    hay = f"{narration} {prompt}".lower()
+    return bool(re.search(rf"\b{re.escape(surname.lower())}\b", hay))
+
+
 def _ensure_character_ref(cfg: dict[str, Any], character: dict[str, Any] | None,
                           images_dir: Path, style: str) -> Path | None:
     """One canonical portrait of the recurring character, generated once and reused.
@@ -291,8 +308,12 @@ def images(
                 raise RuntimeError(
                     f"scene {s['id']} has no image prompt — run `script` (and `visuals`)."
                 )
-            full = _image_prompt(base, character, style)
-            ref = char_ref if (char_ref and _shot_has_person(base, character)) else None
+            # Only append the recurring-figure clause + reference when the beat is about
+            # the figure (their name in narration/prompt). On every other person-beat the
+            # figure is irrelevant — a nameless body — so we pass character=None there.
+            figure = _is_figure_beat(s.get("narration", ""), base, character)
+            full = _image_prompt(base, character if figure else None, style)
+            ref = char_ref if (char_ref and figure) else None
             try:
                 generate_image(full, start_out, cfg, label=f"Scene {s['id']}", ref=ref)
             except RuntimeError as e:
