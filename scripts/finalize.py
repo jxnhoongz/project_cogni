@@ -27,10 +27,12 @@ OUTRO = REPO / "remotion" / "out" / "outro.mp4"
 OVERLAY_SEC = 4.0
 
 # --- per-book knob: a count-up overlay at one scene (or None to skip) ----------
-# Man's Search for Meaning v2 (94-beat cut): beat 13 — he dictated the book in nine
-# straight days. A count-up states a number as flat fact, so only use one the BOOK
-# supports; this was checked against the text before it went on screen.
-COUNTUP_SCENE = 13            # scene id to place Countup.mov on (None = no count-up)
+# Freakonomics (97-beat cut): beat 67 — the swimming pool is ~100x likelier than the gun
+# to kill a child. A count-up states a number as flat fact, so only use one the BOOK
+# supports; the 100x gun-vs-pool comparison is straight from the risk chapter.
+COUNTUP_SCENE = 67            # gun-vs-pool: the pool is ~100x likelier to kill a child
+# The book-cover card ("today's book") over the beat that names the book. None = skip.
+BOOKCOVER_SCENE = 8          # Freakonomics: beat 8 forms the book (Dubner profiles Levitt)
 
 
 def active_slug() -> str:
@@ -73,6 +75,9 @@ def build_cmd(proj: Path, base: Path, out: Path, include_ch1: bool) -> list[str]
     # optional count-up
     if COUNTUP_SCENE is not None and (juice / "Countup.mov").exists():
         jmap[COUNTUP_SCENE] = "Countup.mov"
+    # optional book-cover card
+    if BOOKCOVER_SCENE is not None and (juice / "BookCover.mov").exists():
+        jmap[BOOKCOVER_SCENE] = "BookCover.mov"
 
     items = sorted(jmap.items(), key=lambda kv: starts[kv[0]])
     if not items:

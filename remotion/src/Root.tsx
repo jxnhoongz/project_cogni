@@ -6,6 +6,7 @@ import { Outro } from "./Outro";
 import { JuiceChapter } from "./JuiceChapter";
 import { JuiceCountup } from "./JuiceCountup";
 import { Thumbnail } from "./Thumbnail";
+import { BookCover } from "./BookCover";
 import { CREAM } from "./theme";
 
 // The active book's acts, in order — these must match scenes.json `chapter` values,
@@ -14,16 +15,17 @@ import { CREAM } from "./theme";
 // PER-BOOK KNOBS — retarget BOTH of these together when the active book changes.
 // The intro title used to be hardcoded inside Intro.tsx, which is how book #5 shipped
 // a cut that opened with book #4's title card.
-const BOOK_TITLE = "MAN'S SEARCH FOR MEANING";
+const BOOK_TITLE = "FREAKONOMICS";
+const BOOK_AUTHOR = "Steven D. Levitt & Stephen J. Dubner";
 
 const CHAPTERS = [
-  "The Sunday Feeling",
-  "The Man Who Refused the Visa",
-  "Two Races of Men",
-  "The Will to Meaning",
-  "The Doctor Who Sits Up",
-  "What the Dead Can't Tell You",
-  "The Coat on the Pile",
+  "The Rogue and the Fine",
+  "The Ones Grading the Test",
+  "The Only One Who Knows",
+  "The Crime That Vanished",
+  "Your Own House",
+  "What the Book Couldn't See",
+  "The Verdict",
 ];
 
 export const RemotionRoot: React.FC = () => {
@@ -32,6 +34,8 @@ export const RemotionRoot: React.FC = () => {
       <Composition id="Intro" component={Intro} durationInFrames={150} fps={30} width={1920} height={1080}
         defaultProps={{ bookTitle: BOOK_TITLE }} />
       <Composition id="Outro" component={Outro} durationInFrames={210} fps={30} width={1920} height={1080} />
+      <Composition id="BookCover" component={BookCover} durationInFrames={120} fps={30} width={1920} height={1080}
+        defaultProps={{ cover: "book_cover.jpg", title: BOOK_TITLE, author: BOOK_AUTHOR }} />
       {CHAPTERS.map((title, i) => (
         <Composition
           key={i}
@@ -51,12 +55,10 @@ export const RemotionRoot: React.FC = () => {
         fps={30}
         width={1920}
         height={1080}
-        // Lands on beat 13 — he dictated the book in nine straight days. A count-up puts a
-        // number on screen as flat fact, so it must be one the BOOK supports: this one was
-        // checked against the text ("within nine successive days"). Don't graphic a figure
-        // the model recalled from training — that is how "sixteen million copies" got in.
-        // ink=CREAM: beat 13 is a dim Vienna interior; the default TEAL would vanish.
-        defaultProps={{ value: 9, prefix: "", suffix: "", kicker: "He dictated it in", sub: "nine straight days", ink: CREAM }}
+        // Lands on beat 67 — the swimming pool is ~100x likelier than the gun to kill your
+        // child. Clean round number, visceral, straight from the book's risk chapter.
+        // ink=CREAM reads on most beats; the placement scene is a suburban exterior.
+        defaultProps={{ value: 100, prefix: "", suffix: "×", kicker: "The pool, not the gun", sub: "100x likelier to kill", ink: CREAM }}
       />
       <Composition id="JuiceDemo" component={JuiceDemo} durationInFrames={750} fps={30} width={1920} height={1080} />
       {/* Thumbnails for the ACTIVE book (Man's Search for Meaning). Backgrounds live in
