@@ -86,7 +86,12 @@ modes:
 # en-US-AndrewNeural, en-US-GuyNeural. (openai/elevenlabs can be added later.)
 tts:
   provider: "edge"
-  voice: "en-US-BrianMultilingualNeural"   # Cognibot — casual, natural
+  # Same Brian, WITHOUT the multilingual language detector: the Multilingual variant
+  # re-detects language on every TTS call (= every beat), and on low-signal text
+  # (numbers like "$60,000") it randomly flipped ~one beat per video into
+  # French-accented prosody. Plain Brian can't language-flip. A/B samples:
+  # research/voice_test/ (2026-07-23).
+  voice: "en-US-BrianNeural"               # Cognibot — casual, natural
   # Speaking-rate offset (edge-tts), e.g. "-15%". This is the LENGTH LEVER: slow Brian
   # down instead of padding the script. Measured 2026-07-20: Brian's default is ~167 wpm
   # and -20% gives ~133 wpm. Leave empty unless a script comes up short — the 4,041-word
