@@ -6,7 +6,6 @@ import { Outro } from "./Outro";
 import { JuiceChapter } from "./JuiceChapter";
 import { JuiceCountup } from "./JuiceCountup";
 import { Thumbnail } from "./Thumbnail";
-import { BookCover } from "./BookCover";
 import { CREAM } from "./theme";
 
 // The active book's acts, in order — these must match scenes.json `chapter` values,
@@ -31,11 +30,9 @@ const CHAPTERS = [
 export const RemotionRoot: React.FC = () => {
   return (
     <>
-      <Composition id="Intro" component={Intro} durationInFrames={150} fps={30} width={1920} height={1080}
-        defaultProps={{ bookTitle: BOOK_TITLE }} />
+      <Composition id="Intro" component={Intro} durationInFrames={180} fps={30} width={1920} height={1080}
+        defaultProps={{ bookTitle: BOOK_TITLE, author: BOOK_AUTHOR, cover: "book_cover.jpg" }} />
       <Composition id="Outro" component={Outro} durationInFrames={210} fps={30} width={1920} height={1080} />
-      <Composition id="BookCover" component={BookCover} durationInFrames={120} fps={30} width={1920} height={1080}
-        defaultProps={{ cover: "book_cover.jpg", title: BOOK_TITLE, author: BOOK_AUTHOR }} />
       {CHAPTERS.map((title, i) => (
         <Composition
           key={i}

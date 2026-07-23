@@ -31,8 +31,10 @@ OVERLAY_SEC = 4.0
 # to kill a child. A count-up states a number as flat fact, so only use one the BOOK
 # supports; the 100x gun-vs-pool comparison is straight from the risk chapter.
 COUNTUP_SCENE = 67            # gun-vs-pool: the pool is ~100x likelier to kill a child
-# The book-cover card ("today's book") over the beat that names the book. None = skip.
-BOOKCOVER_SCENE = 8          # Freakonomics: beat 8 forms the book (Dubner profiles Levitt)
+# The book-cover card over the beat that names the book. RETIRED for now — the cover
+# moved INTO the Intro (Act 2 shows it beside the title), so no mid-video card. The
+# placement mechanism is kept in case a book wants both; None = skip.
+BOOKCOVER_SCENE = None
 
 
 def active_slug() -> str:
