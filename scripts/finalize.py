@@ -30,7 +30,7 @@ OVERLAY_SEC = 4.0
 # Freakonomics (97-beat cut): beat 67 — the swimming pool is ~100x likelier than the gun
 # to kill a child. A count-up states a number as flat fact, so only use one the BOOK
 # supports; the 100x gun-vs-pool comparison is straight from the risk chapter.
-COUNTUP_SCENE = 67            # gun-vs-pool: the pool is ~100x likelier to kill a child
+COUNTUP_SCENE = 77            # Eat That Frog: Lally's 66 days vs Tracy's 21-day rule
 # The book-cover card over the beat that names the book. RETIRED for now — the cover
 # moved INTO the Intro (Act 2 shows it beside the title), so no mid-video card. The
 # placement mechanism is kept in case a book wants both; None = skip.

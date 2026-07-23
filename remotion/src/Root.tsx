@@ -14,17 +14,17 @@ import { CREAM } from "./theme";
 // PER-BOOK KNOBS — retarget BOTH of these together when the active book changes.
 // The intro title used to be hardcoded inside Intro.tsx, which is how book #5 shipped
 // a cut that opened with book #4's title card.
-const BOOK_TITLE = "FREAKONOMICS";
-const BOOK_AUTHOR = "Steven D. Levitt & Stephen J. Dubner";
+const BOOK_TITLE = "EAT THAT FROG!";
+const BOOK_AUTHOR = "Brian Tracy";
 
 const CHAPTERS = [
-  "The Rogue and the Fine",
-  "The Ones Grading the Test",
-  "The Only One Who Knows",
-  "The Crime That Vanished",
-  "Your Own House",
-  "What the Book Couldn't See",
-  "The Verdict",
+  "The Frog on Your Desk",
+  "Which One Is the Frog?",
+  "Sorting the Swamp",
+  "Down the Hatch",
+  "The Last Frog Is You",
+  "The Numbers Don't Survive",
+  "The Verdict: Eat It Anyway",
 ];
 
 export const RemotionRoot: React.FC = () => {
@@ -52,10 +52,10 @@ export const RemotionRoot: React.FC = () => {
         fps={30}
         width={1920}
         height={1080}
-        // Lands on beat 67 — the swimming pool is ~100x likelier than the gun to kill your
-        // child. Clean round number, visceral, straight from the book's risk chapter.
-        // ink=CREAM reads on most beats; the placement scene is a suburban exterior.
-        defaultProps={{ value: 100, prefix: "", suffix: "×", kicker: "The pool, not the gun", sub: "100x likelier to kill", ink: CREAM }}
+        // Lands on beat 77 — the Lally (UCL) habit study: median 66 days to automaticity,
+        // vs the 21-day rule Tracy repeats. OUR verified number, graded against the book's.
+        // ink=CREAM default; re-check against the placement beat's background at verify.
+        defaultProps={{ value: 66, prefix: "", suffix: "", kicker: "days to automatic", sub: "Tracy promised 21", ink: CREAM }}
       />
       <Composition id="JuiceDemo" component={JuiceDemo} durationInFrames={750} fps={30} width={1920} height={1080} />
       {/* Thumbnails for the ACTIVE book (Man's Search for Meaning). Backgrounds live in
@@ -65,11 +65,11 @@ export const RemotionRoot: React.FC = () => {
           watched the video — a payoff phrase, not a promise. Test each line against:
           would a stranger scrolling past understand what this video claims? */}
       <Composition id="ThumbA" component={Thumbnail} durationInFrames={1} fps={30} width={1280} height={720}
-        defaultProps={{ bg: "fk_bug.png", line1: "Great book.", line2: "One big bug.", side: "left" as const }} />
+        defaultProps={{ bg: "etf_frogplate.png", line1: "Great rule.", line2: "Fake stats.", side: "left" as const }} />
       <Composition id="ThumbB" component={Thumbnail} durationInFrames={1} fps={30} width={1280} height={720}
-        defaultProps={{ bg: "fk_pool.png", line1: "Your pool", line2: "beats your gun.", side: "left" as const }} />
+        defaultProps={{ bg: "etf_ghost.png", line1: "The study", line2: "never existed.", side: "left" as const }} />
       <Composition id="ThumbC" component={Thumbnail} durationInFrames={1} fps={30} width={1280} height={720}
-        defaultProps={{ bg: "fk_sumo.png", line1: "Sumo is", line2: "rigged.", side: "right" as const }} />
+        defaultProps={{ bg: "etf_mirror.png", line1: "The frog", line2: "is you.", side: "right" as const }} />
     </>
   );
 };
