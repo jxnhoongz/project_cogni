@@ -11,19 +11,27 @@ Standard credit line (substitute the track name):
 > "<Track Name>" by Kevin MacLeod (incompetech.com)
 > Licensed under Creative Commons: By Attribution 4.0 — https://creativecommons.org/licenses/by/4.0/
 
-| File | Track name |
-|---|---|
-| `almost_new.mp3` | Almost New |
-| `bittersweet.mp3` | Bittersweet |
-| `deliberate_thought.mp3` | Deliberate Thought |
-| `dreams_become_real.mp3` | Dreams Become Real |
-| `floating_cities.mp3` | Floating Cities |
-| `frozen_star.mp3` | Frozen Star |
-| `healing.mp3` | Healing |
-| `lobby_time.mp3` | Lobby Time |
-| `long_note_two.mp3` | Long Note Two |
-| `thinking_music.mp3` | Thinking Music |
-| `wholesome.mp3` | Wholesome |
+| File | Track name | Mood |
+|---|---|---|
+| `almost_new.mp3` | Almost New | mellow |
+| `at_rest.mp3` | At Rest | calm piano |
+| `backbay_lounge.mp3` | Backbay Lounge | lounge jazz |
+| `bittersweet.mp3` | Bittersweet | mellow |
+| `carefree.mp3` | Carefree | light folk, upbeat |
+| `deadly_roulette.mp3` | Deadly Roulette | jazz-noir (crime/econ books) |
+| `deliberate_thought.mp3` | Deliberate Thought | pensive piano |
+| `dreams_become_real.mp3` | Dreams Become Real | soft piano |
+| `floating_cities.mp3` | Floating Cities | melancholy piano |
+| `frozen_star.mp3` | Frozen Star | spacey ambient |
+| `gymnopedie_no_1.mp3` | Gymnopedie No 1 | classical (Satie) |
+| `healing.mp3` | Healing | gentle |
+| `heartbreaking.mp3` | Heartbreaking | emotional piano (short 1:36 — loops a lot) |
+| `immersed.mp3` | Immersed | ambient |
+| `lobby_time.mp3` | Lobby Time | light jazz |
+| `long_note_two.mp3` | Long Note Two | ambient drone |
+| `thinking_music.mp3` | Thinking Music | quirky pensive |
+| `wholesome.mp3` | Wholesome | warm folk |
+| `windswept.mp3` | Windswept | airy ambient |
 
 Used so far: Healing (book #1), Long Note Two (book #4), Thinking Music (book #5),
 Deliberate Thought (book #6 Freakonomics).
