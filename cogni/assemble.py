@@ -219,7 +219,12 @@ def _find_music(cfg: dict[str, Any]) -> Path | None:
     music_dir = resolve_shared(cfg, "music")
     if not music_dir.exists():
         return None
-    tracks = sorted(p for p in music_dir.iterdir() if p.suffix.lower() in _MUSIC_EXTS)
+    # exclude narration VO living in the same folder (outro_vo.mp3): a `*_vo` file
+    # must never be hashed onto as a background bed
+    tracks = sorted(
+        p for p in music_dir.iterdir()
+        if p.suffix.lower() in _MUSIC_EXTS and not p.stem.endswith("_vo")
+    )
     if not tracks:
         return None
 

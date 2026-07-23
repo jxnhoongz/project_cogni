@@ -29,6 +29,21 @@ def test_unknown_config_music_fails_loudly(monkeypatch, tmp_path):
         assemble._find_music({"video": {"music": "nope.mp3"}})
 
 
+def test_auto_pick_never_selects_vo_files(monkeypatch, tmp_path):
+    # assets/audio/ also holds narration VO (outro_vo.mp3) — a VO file must never be
+    # hashed onto as a background bed, whatever the slug lands on.
+    _lib(tmp_path, ["a.mp3", "outro_vo.mp3"])
+    for slug in ["b1", "b2", "b3", "b4", "b5", "b6", "b7", "b8"]:
+        _patch(monkeypatch, tmp_path, slug)
+        assert assemble._find_music({"video": {}}).name == "a.mp3"
+
+
+def test_vo_only_library_yields_none(monkeypatch, tmp_path):
+    _lib(tmp_path, ["outro_vo.mp3"])
+    _patch(monkeypatch, tmp_path, "some-book")
+    assert assemble._find_music({"video": {}}) is None
+
+
 def test_auto_pick_is_stable_per_book_and_differs_across_books(monkeypatch, tmp_path):
     _lib(tmp_path, ["a.mp3", "b.mp3", "c.mp3", "d.mp3"])
     _patch(monkeypatch, tmp_path, "book-one")

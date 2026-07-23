@@ -16,11 +16,32 @@ Standard credit line (substitute the track name):
 | `almost_new.mp3` | Almost New |
 | `bittersweet.mp3` | Bittersweet |
 | `deliberate_thought.mp3` | Deliberate Thought |
+| `dreams_become_real.mp3` | Dreams Become Real |
+| `floating_cities.mp3` | Floating Cities |
+| `frozen_star.mp3` | Frozen Star |
 | `healing.mp3` | Healing |
+| `lobby_time.mp3` | Lobby Time |
 | `long_note_two.mp3` | Long Note Two |
 | `thinking_music.mp3` | Thinking Music |
+| `wholesome.mp3` | Wholesome |
 
-Used so far: Healing (book #1), Long Note Two (book #4), Thinking Music (book #5).
+Used so far: Healing (book #1), Long Note Two (book #4), Thinking Music (book #5),
+Deliberate Thought (book #6 Freakonomics).
+
+**Not music:** `outro_vo.mp3` is the narrated outro line, kept here as the SOURCE for
+muxing into `remotion/out/outro.mp4` (a fresh Remotion render of Outro has NO audio —
+re-mux this after re-rendering or the sign-off goes silent). The auto-picker skips
+`*_vo` files.
+
+**Library growth re-rolls the hash:** the auto-pick is `sha1(slug) % len(tracks)`, so
+adding tracks changes what a RE-assemble of an old book would pick (and thus its
+required attribution line). Already-rendered videos are unaffected; if you re-assemble
+an old book, re-check `[assemble] mixing music:` and fix the credit.
+
+**Pixabay:** more beds can be hand-downloaded from pixabay.com/music (Pixabay Content
+License — free for monetized YouTube, no attribution required, but note the source +
+track here anyway). Downloads must be manual (their ToS forbids scripted scraping);
+drop files in this folder, snake_case names, and they join the auto-pick pool.
 
 > Track names here are derived from the filenames, which were taken from the
 > Incompetech downloads. Before publishing, confirm the exact title and licence
