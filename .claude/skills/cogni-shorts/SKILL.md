@@ -10,9 +10,11 @@ Cut 1080×1920 Shorts from assets we already own. Unlike OpusClip/Klap (which
 structure — per-beat mp3, still, `duration_sec`, and subtitle `.srt`. A Short is
 therefore **select an arc → reframe → re-time captions**, not highlight-detection.
 
-**PILOT-GATE:** the one thing that can't be settled on paper is whether our 16:9
-low-poly stills read well cropped to vertical. Cut ONE short, judge it against the
-3-second test below, THEN batch. Fold what you learn back into this skill.
+**Pilot done (Atomic Habits "37× is fake math", 2026-07).** Validated: our 16:9 low-poly
+stills crop to vertical and look native; the puzzle hook + brand cards carry; whole thing
+$0 on reused stills. Two findings baked in below: (1) crop toward the subject, don't pad;
+(2) **dual-track pacing** — v0 held one still per narration beat (~11s each) and dragged;
+the fix is a visual track that cuts every ~2-4s independent of the narration boundaries.
 
 ## The two models
 
@@ -46,22 +48,33 @@ costs more than the upload gains. Quality-gate to the arcs that stand alone cold
 Target VVSA 70–90% / avg-%-viewed >80%. The 3-second test: **if it doesn't stop *you*
 scrolling, it won't stop a stranger** — re-cut before shipping.
 
-## Reframe: crop vs pad
-- **Center-crop to 9:16** when the composition is centered with negative space — most of
-  our single-subject / metaphor-object beats (hourglass, chain, frog-on-plate, ref-locked
-  author shots). Looks native.
-- **Blur-pad** (image floating in a blurred fill) when the composition is a left-right
-  **split or wide** (pool-vs-gun, desk-split-in-two) — a crop would bisect both subjects.
-- Never center-crop a split beat. When unsure, pad (safe) and note it for the pilot.
+## Reframe: crop toward the subject (pilot-validated on real stills, 2026-07)
+**Crop is the default and it looks native** — a 9:16 slice of a centered low-poly beat
+(spotlit figure, walking figure, metaphor object) is indistinguishable from a made-for-
+vertical shot. The variable is *where* the crop window sits, not whether to pad:
+- **Centered subject → center-crop.** `crop=ih*9/16:ih`.
+- **Off-center subject → bias the window toward it.** `crop=ih*9/16:ih:x=<offset>` — a
+  blind center-crop on a left-placed figure cropped him out entirely (verified). Per-beat
+  `crop_x` knob; eyeball the subject's side.
+- **Blur-pad is a weak last resort, not the safe default.** Our art is wide, so padding
+  leaves big blurred dead-bands and a tiny subject. Reserve it for genuine two-subjects-
+  far-apart splits (pool-vs-gun) — and prefer just picking a beat that crops, or a slow pan.
 
-## Build mechanics
-- Canvas 1080×1920, 30fps. Reuse the beat mp3s (concat in order); no re-narrate for Model A.
-- Reframe with ffmpeg — crop: `crop=ih*9/16:ih,scale=1080:1920`; pad:
-  `split[a][b];[a]scale=1080:1920,boxblur=40[bg];[b]scale=1080:-1[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2`.
-- Hook card + kinetic captions + punch-in: Remotion (reuse `Thumbnail`/`Misreg` type
-  style, the `.srt` word timings drive the captions).
-- The reusable encapsulation is `scripts/shortify.py <slug> <beat-start> <beat-end>` —
-  build it during the pilot; until then the ffmpeg recipe above is the spec.
+## Build mechanics (BUILT — this is the pipeline)
+A short is a hand-authored spec + one command:
+1. **Author `shorts/<slug>.json`** (see `shorts/atomic-habits-37x.json`): `narration`
+   (one line per beat, plain second-person), and `shots` — the VISUAL track, cut every
+   ~2-4s. Each shot is a brand card (`kind:"hook"|"end"` + `cap`) or a book still
+   (`scene:<id>`, `pos:"x% y%"` crop bias, `dur`, `cap:[line1, line2?]`). The two tracks
+   run in parallel, so `sum(shot durs) ≈ sum(narration durs)`.
+2. **`python scripts/shortify.py shorts/<slug>.json`** narrates each line (plain
+   `en-US-BrianNeural`), measures durations, stages stills + music into `remotion/public`,
+   warns if the tracks drift >0.4s, and renders the Remotion `Short` composition to
+   `projects/<book>/shorts/<slug>.mp4`. `--no-render` stages only.
+- The `Short` composition (`remotion/src/Short.tsx`) is generic: dual-track (continuous
+  narration + independent shot cuts), CSS crop-toward-subject via `object-position`,
+  per-shot push-in, big two-line captions (cream + ochre), brand hook/end cards.
+- Captions are per-shot punch phrases (2-4 words), NOT the full `.srt` — shorts-native.
 
 ## Upload
 Gate on the **parent video being PUBLIC** (a Short is a trailer; its "full verdict" link
@@ -71,6 +84,8 @@ Reels (the Higgsfield MCP can publish to TikTok). Link the long video in the des
 ## Common mistakes
 - Slow Ken Burns as the opener — too slow for a 1.5s window. Lead with the text hook.
 - Clipping a mid-arc beat — no cold-open line, dies in 2s.
-- One still held the whole time — reads as dead. Cut every 2–4s.
-- Center-cropping a split composition — bisects both subjects. Pad instead.
+- One still per narration beat (~11s holds) — reads as dead. Decouple: visual cuts
+  every 2–4s over continuous narration (the v0→v1 fix).
+- A hook card that sits static while a long hook line plays — cut to imagery after ~3s.
+- Blind center-crop on an off-center subject — crops them out. Bias `pos` toward them.
 - Shipping all 7 acts — weak Shorts are first impressions. Ship 3–4 strong.
