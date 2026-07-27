@@ -47,17 +47,17 @@ const AH_SHOTS: Shot[] = [
 // PER-BOOK KNOBS — retarget BOTH of these together when the active book changes.
 // The intro title used to be hardcoded inside Intro.tsx, which is how book #5 shipped
 // a cut that opened with book #4's title card.
-const BOOK_TITLE = "EAT THAT FROG!";
-const BOOK_AUTHOR = "Brian Tracy";
+const BOOK_TITLE = "THE RICHEST MAN IN BABYLON";
+const BOOK_AUTHOR = "George S. Clason";
 
 const CHAPTERS = [
-  "The Frog on Your Desk",
-  "Which One Is the Frog?",
-  "Sorting the Swamp",
-  "Down the Hatch",
-  "The Last Frog Is You",
-  "The Numbers Don't Survive",
-  "The Verdict: Eat It Anyway",
+  "The City With No Gold",
+  "The Seed You Never Plant",
+  "Glass That Looked Like Jewels",
+  "Clay Tablets and Stone Walls",
+  "Luck You Build With Your Hands",
+  "The Chapter Clason Couldn't Write",
+  "Keep the Tenth, Burn the Fairy Tale",
 ];
 
 export const RemotionRoot: React.FC = () => {
@@ -85,10 +85,10 @@ export const RemotionRoot: React.FC = () => {
         fps={30}
         width={1920}
         height={1080}
-        // Lands on beat 77 — the Lally (UCL) habit study: median 66 days to automaticity,
-        // vs the 21-day rule Tracy repeats. OUR verified number, graded against the book's.
-        // ink=CREAM default; re-check against the placement beat's background at verify.
-        defaultProps={{ value: 66, prefix: "", suffix: "", kicker: "days to automatic", sub: "Tracy promised 21", ink: CREAM }}
+        // Lands on beat 71 — the Dow lost ~89% from its 1929 peak to the 1932 trough
+        // (web-verified). THE number the book's "gold always multiplies" fairy tale
+        // defines away — it hit the patient saver and the gambler alike.
+        defaultProps={{ value: 89, prefix: "", suffix: "%", kicker: "the Dow, 1929 → 1932", sub: "gone — saver and gambler alike", ink: CREAM }}
       />
       <Composition id="JuiceDemo" component={JuiceDemo} durationInFrames={750} fps={30} width={1920} height={1080} />
       {/* Generic vertical-Short composition. Per-short data comes from a spec JSON via
@@ -107,11 +107,11 @@ export const RemotionRoot: React.FC = () => {
           watched the video — a payoff phrase, not a promise. Test each line against:
           would a stranger scrolling past understand what this video claims? */}
       <Composition id="ThumbA" component={Thumbnail} durationInFrames={1} fps={30} width={1280} height={720}
-        defaultProps={{ bg: "etf_frogplate.png", line1: "Great rule.", line2: "Fake stats.", side: "left" as const }} />
+        defaultProps={{ bg: "rmb_crash.png", line1: "He preached rich.", line2: "He went broke.", side: "left" as const }} />
       <Composition id="ThumbB" component={Thumbnail} durationInFrames={1} fps={30} width={1280} height={720}
-        defaultProps={{ bg: "etf_ghost.png", line1: "The study", line2: "never existed.", side: "left" as const }} />
+        defaultProps={{ bg: "rmb_tenth.png", line1: "Keep the tenth.", line2: "Burn the rest.", side: "left" as const }} />
       <Composition id="ThumbC" component={Thumbnail} durationInFrames={1} fps={30} width={1280} height={720}
-        defaultProps={{ bg: "etf_mirror.png", line1: "The frog", line2: "is you.", side: "right" as const }} />
+        defaultProps={{ bg: "rmb_hook.png", line1: "Save for years.", line2: "Still broke?", side: "right" as const }} />
     </>
   );
 };
