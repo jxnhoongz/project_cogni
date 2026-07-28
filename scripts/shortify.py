@@ -1,22 +1,20 @@
-"""shortify — build a 9:16 Cognibot Short from a spec JSON.
+"""shortify — build a 9:16 karaoke Short from a spec JSON.
 
-A Short's editorial work (the hook, the beat-by-beat narration, which still goes with
-which line, the crop bias, the captions, the pacing) is hand-authored in a spec file —
-see shorts/atomic-habits-37x.json. This script does the MECHANICAL part around it:
-narrate each line (edge-tts, the same plain-Brian voice as the videos), measure the
-durations, stage the referenced stills + music into remotion/public, emit the render
-spec, and render the Remotion `Short` composition to the book project's shorts/ folder.
+The editorial work (the hook, the beat-by-beat narration, which still backs each line) is
+hand-authored in a spec. This script does the mechanical rest: narrate each segment
+(plain-Brian edge-tts), get REAL per-word timings from faster-whisper, group the words
+into short lines and auto-pick each line's keyword, stage the stills + cover + music, and
+render the Remotion `Short2` composition (persistent top-left book badge; centre-safe
+karaoke captions where the keyword sits in ochre and the spoken word scales in sync).
 
 Spec (shorts/<slug>.json):
-  { slug, book: "<proj under projects/>", music: "<file in assets/audio>",
-    narration: [ "<line per beat>", ... ],
-    shots: [ {kind:"hook"|"end", dur, cap:[...]}       # brand cards, no still
-             | {scene:<id>, pos:"x% y%", dur, cap:[...]} ] }   # a book still, crop-biased
+  { slug, book: "<proj under projects/>", title: "ATOMIC HABITS",
+    cover: {title, author}   # fetched legally; OR cover_file: "<path>"
+    music: "<file in assets/audio>",
+    segments: [ {text: "<narration line>", scene: <img id or null>, pos?: "x% y%"}, ... ] }
+The LAST segment with scene:null becomes the COGNIBOT + Subscribe end card.
 
-The visual track (shots) and the narration track run in PARALLEL in the composition, so
-sum(shot durs) should ~match sum(narration durs). shortify warns if they drift > 0.4s.
-
-Usage:  python scripts/shortify.py shorts/atomic-habits-37x.json [--no-render]
+Usage:  python scripts/shortify.py shorts/<slug>.json [--no-render]
 """
 from __future__ import annotations
 
@@ -28,14 +26,37 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 PUBLIC = REPO / "remotion" / "public"
-VOICE = "en-US-BrianNeural"          # plain Brian — no multilingual accent-flip (see config.yaml)
+VOICE = "en-US-BrianNeural"
 FPS = 30
+STOP = {"THE", "A", "TO", "OF", "AND", "IS", "YOU", "IT'S", "SO", "BE", "IN", "FOR", "DON'T",
+        "WHO", "NOT", "AN", "YOUR", "YOU'RE", "THIS", "THAT'S", "OUT", "ONE", "EVERY", "ON"}
 
 
 def _dur(mp3: Path) -> float:
-    out = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
-                          "-of", "default=nw=1:nk=1", str(mp3)], capture_output=True, text=True)
-    return round(float(out.stdout.strip()), 2)
+    r = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
+                        "-of", "default=nw=1:nk=1", str(mp3)], capture_output=True, text=True)
+    return round(float(r.stdout.strip()), 2)
+
+
+def _lines(words: list[dict]) -> list[dict]:
+    """Group timed words into <=4-word lines (break on punctuation); tag each line's keyword
+    (longest non-stopword) so the caption can hold it in ochre."""
+    clean = [{"w": w["w"].replace("/", "").strip(), "t": w["t"]} for w in words if w["w"].replace("/", "").strip()]
+    lines, cur = [], []
+    for w in clean:
+        cur.append({"w": w["w"].rstrip(".,:;?!"), "t": w["t"]})
+        if w["w"].rstrip()[-1:] in ".,:;?!" or len(cur) >= 4:
+            lines.append(cur); cur = []
+    if cur:
+        lines.append(cur)
+    out = []
+    for ln in lines:
+        k, kl = len(ln) - 1, -1
+        for i, w in enumerate(ln):
+            if w["w"] not in STOP and len(w["w"]) > kl:
+                kl, k = len(w["w"]), i
+        out.append({"k": k, "ws": ln})
+    return out
 
 
 def build(spec_path: Path, do_render: bool) -> None:
@@ -43,62 +64,59 @@ def build(spec_path: Path, do_render: bool) -> None:
     slug = spec["slug"]
     proj = REPO / "projects" / spec["book"]
     imgs = proj / "images"
-    if not imgs.exists():
-        raise SystemExit(f"no images dir at {imgs}")
     PUBLIC.mkdir(parents=True, exist_ok=True)
 
-    # 1. narrate each beat -> public/<slug>_beat_N.mp3, measure duration
-    narr = []
-    for i, line in enumerate(spec["narration"], 1):
-        mp3 = PUBLIC / f"{slug}_beat_{i}.mp3"
+    from faster_whisper import WhisperModel
+    print("[shortify] loading whisper (base.en) ...")
+    whisper = WhisperModel("base.en", device="cpu", compute_type="int8")
+
+    segs = []
+    for i, s in enumerate(spec["segments"], 1):
+        mp3 = PUBLIC / f"{slug}_seg_{i}.mp3"
         subprocess.run([sys.executable, "-m", "edge_tts", "--voice", VOICE,
-                        "--text", line, "--write-media", str(mp3)], check=True, capture_output=True)
-        narr.append({"src": mp3.name, "dur": _dur(mp3)})
-    print(f"[shortify] narrated {len(narr)} beats ({VOICE})")
+                        "--text", s["text"], "--write-media", str(mp3)], check=True, capture_output=True)
+        wsegs, _ = whisper.transcribe(str(mp3), word_timestamps=True, language="en")
+        words = [{"w": w.word.strip().upper(), "t": round(w.start, 2)} for ws in wsegs for w in (ws.words or [])]
+        seg = {"dur": _dur(mp3), "audio": mp3.name, "lines": _lines(words)}
+        if s.get("scene") is not None:
+            src = imgs / f"scene_{int(s['scene']):03d}.png"
+            if not src.exists():
+                raise SystemExit(f"segment {i} references missing still {src}")
+            dst = PUBLIC / f"{slug}_s{int(s['scene']):03d}.png"
+            dst.write_bytes(src.read_bytes())
+            seg["img"] = dst.name
+            seg["pos"] = s.get("pos", "50% 46%")
+        else:
+            seg["img"] = None
+        segs.append(seg)
+        print(f"[shortify] seg {i}: {seg['dur']}s, {len(seg['lines'])} lines"
+              + (f", still {seg['img']}" if seg["img"] else ", END CARD"))
 
-    # 2. stage stills referenced by shots -> public/<slug>_sNNN.png; build shot props
-    shots = []
-    for s in spec["shots"]:
-        if s.get("kind") in ("hook", "end"):
-            shots.append({"kind": s["kind"], "dur": s["dur"], "cap": s["cap"]})
-            continue
-        src = imgs / f"scene_{int(s['scene']):03d}.png"
-        if not src.exists():
-            raise SystemExit(f"shot references missing still {src}")
-        dst = PUBLIC / f"{slug}_s{int(s['scene']):03d}.png"
-        dst.write_bytes(src.read_bytes())
-        shots.append({"kind": "photo", "img": dst.name, "pos": s.get("pos", "50% 50%"),
-                      "dur": s["dur"], "cap": s.get("cap")})
+    # cover: fetch legally, or copy a provided file
+    cov = PUBLIC / f"{slug}_cover.jpg"
+    if spec.get("cover_file"):
+        cov.write_bytes(Path(spec["cover_file"]).read_bytes())
+    else:
+        c = spec["cover"]
+        subprocess.run([sys.executable, str(REPO / "scripts" / "fetch_cover.py"), c["title"],
+                        "--author", c.get("author", ""), "--out", str(cov)], check=True, capture_output=True)
 
-    # 3. stage music
-    music = spec.get("music")
-    if music:
-        mdst = PUBLIC / f"{slug}_music.mp3"
-        mdst.write_bytes((REPO / "assets" / "audio" / music).read_bytes())
-        music = mdst.name
+    (PUBLIC / f"{slug}_music.mp3").write_bytes((REPO / "assets" / "audio" / spec["music"]).read_bytes())
 
-    # 4. sync check — the two tracks should sum to ~the same length
-    a = sum(n["dur"] for n in narr)
-    v = sum(s["dur"] for s in shots)
-    flag = " <-- DRIFT >0.4s, retime shots" if abs(a - v) > 0.4 else ""
-    print(f"[shortify] narration {a:.2f}s | visuals {v:.2f}s{flag}")
-
-    # 5. write the render spec (props for the generic `Short` composition)
-    render_spec = PUBLIC / f"{slug}.short.json"
-    render_spec.write_text(json.dumps({"narr": narr, "shots": shots, "music": music},
-                                      ensure_ascii=False, indent=1), encoding="utf-8")
+    props = {"segs": segs, "cover": cov.name, "title": spec["title"], "music": f"{slug}_music.mp3"}
+    spec_out = PUBLIC / f"{slug}.short.json"
+    spec_out.write_text(json.dumps(props, ensure_ascii=False, indent=1), encoding="utf-8")
+    total = round(sum(s["dur"] for s in segs), 1)
     out = proj / "shorts" / f"{slug}.mp4"
     out.parent.mkdir(exist_ok=True)
-    print(f"[shortify] wrote {render_spec.relative_to(REPO)}")
+    print(f"[shortify] {total}s, wrote {spec_out.relative_to(REPO)}")
 
     if not do_render:
-        print(f"[shortify] preview: cd remotion && npx remotion render src/index.ts Short "
-              f'"{out}" --props="{render_spec}"')
+        print(f'[shortify] render: cd remotion && npx remotion render src/index.ts Short2 "{out}" --props="{spec_out}"')
         return
-
-    print("[shortify] rendering ...")
-    r = subprocess.run(["npx", "remotion", "render", "src/index.ts", "Short", str(out),
-                        f"--props={render_spec}"], cwd=REPO / "remotion", shell=(sys.platform == "win32"))
+    print("[shortify] rendering Short2 ...")
+    r = subprocess.run(["npx", "remotion", "render", "src/index.ts", "Short2", str(out), f"--props={spec_out}"],
+                       cwd=REPO / "remotion", shell=(sys.platform == "win32"))
     if r.returncode != 0:
         raise SystemExit("remotion render failed")
     print(f"[shortify] wrote {out}")
@@ -107,7 +125,7 @@ def build(spec_path: Path, do_render: bool) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("spec")
-    ap.add_argument("--no-render", action="store_true", help="stage assets + write spec, skip the render")
+    ap.add_argument("--no-render", action="store_true")
     a = ap.parse_args()
     build(Path(a.spec), not a.no_render)
 

@@ -10,11 +10,21 @@ Cut 1080×1920 Shorts from assets we already own. Unlike OpusClip/Klap (which
 structure — per-beat mp3, still, `duration_sec`, and subtitle `.srt`. A Short is
 therefore **select an arc → reframe → re-time captions**, not highlight-detection.
 
-**Pilot done (Atomic Habits "37× is fake math", 2026-07).** Validated: our 16:9 low-poly
-stills crop to vertical and look native; the puzzle hook + brand cards carry; whole thing
-$0 on reused stills. Two findings baked in below: (1) crop toward the subject, don't pad;
-(2) **dual-track pacing** — v0 held one still per narration beat (~11s each) and dragged;
-the fix is a visual track that cuts every ~2-4s independent of the narration boundaries.
+**What works (validated to "uploadable", 2026-07).** The first attempts FAILED and taught
+the recipe: a slideshow (one still per ~11s beat) dragged; a caption-card version hid the
+text behind app UI and only soft-faded; and a *debunk* angle ("your favorite number is
+fake") read as smug — the same gotcha the long-form has to avoid. What cleared the bar:
+- **Teach, don't dunk.** Lead with the book's genuinely useful idea, handed over
+  generously — not "this famous thing is wrong." A short has no room for the balancing
+  "but here's what's good," so a pure debunk is all sneer. (See [[cognibot-tone-not-smug]].)
+- **Karaoke captions** — real per-word timing (faster-whisper on our own narration), the
+  line sits still and the highlight glides word-to-word; the line's **keyword holds in
+  ochre**, the spoken word scales. This is "the pop subtitle thing" done right.
+- **Dead-centre captions** — the bottom ~30% is buried under Shorts UI (handle, buttons,
+  description). Text must live in the middle safe zone.
+- **Persistent top-left book badge** (cover + title) — the one corner app UI leaves alone;
+  gives instant context to a mid-scroll landing.
+- Crop toward the subject (below); reused stills, $0.
 
 ## The two models
 
@@ -35,15 +45,15 @@ costs more than the upload gains. Quality-gate to the arcs that stand alone cold
 - 4–8 beats, **~35–60s** total (sum `duration_sec`).
 
 ## The retention recipe (research-grounded — the 1.3–1.8s swipe window is real)
-1. **Frame 1 = a big text hook**, before the zoom or the first spoken word. People
-   scroll muted; the *line they read* stops them, not the image. Same skill as our
-   thumbnails. Two-beat reveal works ("Every guru quotes this study." → "It doesn't exist.").
-2. **No bumper.** Never the channel intro. Cold-open on the hook.
-3. **Refresh every 2–4s** — hard-cut to the next still; hold nothing for 10s.
-4. **Punch-in per cut** — 0.3s scale-up when each still lands. Cheap motion = "alive."
-5. **Kinetic captions** — big centered words popping one-by-one from the beat `.srt`.
-   The text moving covers for the still not moving.
-6. **End on the curiosity gap + CTA** — "full verdict on the channel," 1s cover card.
+1. **Open on the useful hook in the first ~2s**, teaching not dunking. People scroll
+   muted; the karaoke caption they *read* stops them. ("Your habits don't stick — and it's
+   not because you're lazy.")
+2. **No channel bumper.** The persistent top-left badge carries branding instead.
+3. **A still per ~4–6s segment is fine** — the karaoke captions (a new phrase every
+   ~1s) + a slow push-in carry the pace; the image doesn't have to cut fast.
+4. **Karaoke captions, dead-centre**, keyword in ochre, spoken word scales (in sync).
+5. **~25–35s.** Hit the idea fast; don't overstay.
+6. **End card** — COGNIBOT + "full verdict on the channel" + Subscribe.
 
 Target VVSA 70–90% / avg-%-viewed >80%. The 3-second test: **if it doesn't stop *you*
 scrolling, it won't stop a stranger** — re-cut before shipping.
@@ -62,19 +72,23 @@ vertical shot. The variable is *where* the crop window sits, not whether to pad:
 
 ## Build mechanics (BUILT — this is the pipeline)
 A short is a hand-authored spec + one command:
-1. **Author `shorts/<slug>.json`** (see `shorts/atomic-habits-37x.json`): `narration`
-   (one line per beat, plain second-person), and `shots` — the VISUAL track, cut every
-   ~2-4s. Each shot is a brand card (`kind:"hook"|"end"` + `cap`) or a book still
-   (`scene:<id>`, `pos:"x% y%"` crop bias, `dur`, `cap:[line1, line2?]`). The two tracks
-   run in parallel, so `sum(shot durs) ≈ sum(narration durs)`.
-2. **`python scripts/shortify.py shorts/<slug>.json`** narrates each line (plain
-   `en-US-BrianNeural`), measures durations, stages stills + music into `remotion/public`,
-   warns if the tracks drift >0.4s, and renders the Remotion `Short` composition to
-   `projects/<book>/shorts/<slug>.mp4`. `--no-render` stages only.
-- The `Short` composition (`remotion/src/Short.tsx`) is generic: dual-track (continuous
-  narration + independent shot cuts), CSS crop-toward-subject via `object-position`,
-  per-shot push-in, big two-line captions (cream + ochre), brand hook/end cards.
-- Captions are per-shot punch phrases (2-4 words), NOT the full `.srt` — shorts-native.
+1. **Author `shorts/<slug>.json`** (see `shorts/atomic-habits-2min.json`):
+   `{ slug, book: "<proj under projects/>", title: "ATOMIC HABITS",
+      cover: {title, author}, music: "<file in assets/audio>",
+      segments: [ {text: "<narration line>", scene: <still id>, pos?: "x% y%"}, ... ] }`
+   One segment per narration line + still; the LAST segment with `scene: null` is the
+   COGNIBOT + Subscribe end card. Content = TEACH one useful idea, ~25–35s.
+2. **`python scripts/shortify.py shorts/<slug>.json`** → narrates each line (plain
+   `en-US-BrianNeural`), gets real per-word timings via **faster-whisper** on the audio,
+   groups words into ≤4-word lines + auto-picks each line's keyword (longest non-stopword),
+   stages stills/cover/music into `remotion/public`, writes a props JSON, and renders the
+   Remotion `Short2` composition to `projects/<book>/shorts/<slug>.mp4`. `--no-render` stages only.
+- `Short2` (`remotion/src/Short2.tsx`) is generic (all data from props via `--props`):
+  persistent top-left badge, centre-safe karaoke captions (keyword ochre, spoken word
+  scales), CSS crop-toward-subject, push-in. Duration from `calculateMetadata`.
+- **Known minor polish:** whisper occasionally splits a hyphenated word ("push-up" → "PUSH
+  -UP") or the longest-word keyword pick is weak ("EMBARRASSINGLY" over "SIMPLE") — eyeball
+  each short; hand-edit the props JSON or spec if a line reads wrong. Rare mishears possible.
 
 ## Upload
 Gate on the **parent video being PUBLIC** (a Short is a trailer; its "full verdict" link
@@ -82,10 +96,10 @@ must resolve). **Drip** 3–4 across the week+, don't dump. Same file → YouTub
 Reels (the Higgsfield MCP can publish to TikTok). Link the long video in the description.
 
 ## Common mistakes
-- Slow Ken Burns as the opener — too slow for a 1.5s window. Lead with the text hook.
-- Clipping a mid-arc beat — no cold-open line, dies in 2s.
-- One still per narration beat (~11s holds) — reads as dead. Decouple: visual cuts
-  every 2–4s over continuous narration (the v0→v1 fix).
-- A hook card that sits static while a long hook line plays — cut to imagery after ~3s.
+- **A debunk angle** ("your favorite X is fake") — reads smug in a format with no room to
+  balance it. Teach a useful idea instead.
+- **Captions in the bottom third** — hidden behind Shorts UI. Keep them dead-centre.
+- **Estimated caption timing** — drifts out of sync. Use whisper word timings (shortify does).
+- Slow Ken Burns as the *only* motion with no captions — dead. Karaoke carries the pace.
 - Blind center-crop on an off-center subject — crops them out. Bias `pos` toward them.
-- Shipping all 7 acts — weak Shorts are first impressions. Ship 3–4 strong.
+- Shipping all ideas — weak Shorts are first impressions. Ship 3–4 strong, one idea each.
