@@ -57,7 +57,7 @@ const CHAPTERS = [
   "Clay Tablets and Stone Walls",
   "Luck You Build With Your Hands",
   "The Chapter Clason Couldn't Write",
-  "Keep the Tenth, Burn the Fairy Tale",
+  "Keep the Tenth, Skip the Fairy Tale",
 ];
 
 export const RemotionRoot: React.FC = () => {
@@ -107,7 +107,7 @@ export const RemotionRoot: React.FC = () => {
           watched the video — a payoff phrase, not a promise. Test each line against:
           would a stranger scrolling past understand what this video claims? */}
       <Composition id="ThumbA" component={Thumbnail} durationInFrames={1} fps={30} width={1280} height={720}
-        defaultProps={{ bg: "rmb_crash.png", line1: "He preached rich.", line2: "He went broke.", side: "left" as const }} />
+        defaultProps={{ bg: "rmb_crash.png", line1: "Great rule.", line2: "False promise.", side: "left" as const }} />
       <Composition id="ThumbB" component={Thumbnail} durationInFrames={1} fps={30} width={1280} height={720}
         defaultProps={{ bg: "rmb_tenth.png", line1: "Keep the tenth.", line2: "Burn the rest.", side: "left" as const }} />
       <Composition id="ThumbC" component={Thumbnail} durationInFrames={1} fps={30} width={1280} height={720}
