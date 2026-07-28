@@ -32,32 +32,42 @@ _SYSTEM = (
 def _build_prompt(scenes: list[dict[str, Any]]) -> str:
     blocks = []
     for s in scenes:
-        blocks.append(
-            f"Scene {s['id']}:\n"
+        animated = bool(s.get("animate"))
+        kind = f"ANIMATED ({s.get('mode', 'MOTION')})" if animated else "STILL (Ken Burns pan)"
+        block = (
+            f"Scene {s['id']} — {kind}:\n"
             f"  narration: {s.get('narration') or s.get('narration_en', '')}\n"
-            f"  start_image_prompt: {s.get('start_image_prompt', '')}\n"
-            f"  end_image_prompt: {s.get('end_image_prompt', '')}\n"
-            f"  video_prompt: {s.get('video_prompt', '')}"
+            f"  start_image_prompt: {s.get('start_image_prompt', '')}"
         )
+        if animated:
+            block += (
+                f"\n  end_image_prompt: {s.get('end_image_prompt', '')}\n"
+                f"  video_prompt: {s.get('video_prompt', '')}"
+            )
+        blocks.append(block)
     scenes_block = "\n\n".join(blocks)
     return (
-        f"Review the visual prompts for each scene below. Judge THREE things:\n"
-        f"1. Relevance — does start_image_prompt depict what this scene's narration is "
-        f"about? Flag it if the image is off-topic or generic filler.\n"
-        f"2. Coherence — is end_image_prompt the SAME scene a moment later (same setting "
-        f"and subject, one subtle change)? Flag it if it is a different or unrelated "
-        f"image that could not be the end frame of a gentle motion from the start.\n"
-        f"3. Motion — does video_prompt describe a subtle, slow start->end motion that "
-        f"fits the pair (no shake, no new characters/faces)? Flag it if not.\n\n"
-        f"Also flag any realistic human faces or hands.\n\n"
+        f"The art style is LOW-POLY 3D — stylized, faceted characters WITH clear faces are "
+        f"correct and good; only flag PHOTOREALISTIC faces/hands, never low-poly ones.\n\n"
+        f"Most scenes are STILL (a single Ken Burns pan over one image) — they have NO "
+        f"end_image_prompt or video_prompt ON PURPOSE. Do NOT flag a still scene for missing "
+        f"motion, missing end frame, or empty video_prompt. Only ANIMATED scenes get the "
+        f"motion/coherence checks.\n\n"
+        f"Review each scene below:\n"
+        f"1. Relevance (ALL scenes) — does start_image_prompt depict what this scene's "
+        f"narration is about? Flag it if off-topic or generic filler.\n"
+        f"2. Coherence (ANIMATED scenes only) — is end_image_prompt the SAME scene a moment "
+        f"later (same setting/subject, one subtle change)? Flag if it is unrelated.\n"
+        f"3. Motion (ANIMATED scenes only) — does video_prompt describe a subtle, slow "
+        f"start->end camera move (no shake, no NEW characters)? Flag if not.\n\n"
         f"{scenes_block}\n\n"
         f'Return JSON: {{"scenes": [{{"id": <int>, "ok": <bool>, '
         f'"issues": ["short, specific problem", ...]}}, ...]}} for EVERY scene id.\n'
-        f"- ok = true only when relevance, coherence, and motion are all fine. "
-        f"When ok = true, issues must be [].\n"
-        f"- ok = false when there is any real problem; list each problem as a short, "
-        f"specific string (what is wrong and which of the three checks it fails). Do NOT "
-        f"invent nitpicks — only flag genuine issues that would hurt the video."
+        f"- ok = true when the applicable checks pass (relevance for stills; relevance + "
+        f"coherence + motion for animated). When ok = true, issues must be [].\n"
+        f"- ok = false only for a GENUINE problem that would hurt the video; list each as a "
+        f"short, specific string. Do NOT invent nitpicks, and do NOT flag stills for lacking "
+        f"motion."
     )
 
 

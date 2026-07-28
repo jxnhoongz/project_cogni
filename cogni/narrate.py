@@ -118,8 +118,15 @@ def _edge_tts(
     out_path: Path,
     max_words: int = _SUB_MAX_WORDS,
     max_chars: int = _SUB_MAX_CHARS,
+    rate: str = "",
 ) -> None:
-    """Write the mp3 AND a word-synced .srt chunked into short phrases."""
+    """Write the mp3 AND a word-synced .srt chunked into short phrases.
+
+    `rate` is an edge-tts speed offset like "-20%" — the runtime lever: slow Brian down
+    instead of padding the script to hit the ~20-min channel length. Measured 2026-07-20:
+    his default is ~167 wpm and -20% gives ~133 wpm. Subtitles come from this same call,
+    so they stay in sync at any rate.
+    """
     try:
         import edge_tts
     except ImportError as e:
@@ -128,7 +135,8 @@ def _edge_tts(
     async def _run() -> None:
         # boundary="WordBoundary" (not the default SentenceBoundary) gives per-word
         # timings, so captions show a few words at a time rather than a whole line.
-        comm = edge_tts.Communicate(text, voice, boundary="WordBoundary")
+        kw = {"rate": rate} if rate else {}
+        comm = edge_tts.Communicate(text, voice, boundary="WordBoundary", **kw)
         words: list[tuple[float, float, str]] = []
         with open(out_path, "wb") as f:
             async for chunk in comm.stream():
@@ -146,6 +154,33 @@ def _edge_tts(
     asyncio.run(_run())
 
 
+def _text_stamp_path(out_path: Path) -> Path:
+    return out_path.with_suffix(".txt")
+
+
+def _stamp_audio_text(out_path: Path, text: str) -> None:
+    """Record the exact narration this mp3 was made from (staleness marker)."""
+    _text_stamp_path(out_path).write_text(text, encoding="utf-8")
+
+
+def _audio_matches(out_path: Path, text: str) -> bool:
+    """True only if the cached mp3 was generated from THIS narration text.
+
+    Caching on filename alone silently ships the wrong audio: regenerating a script
+    changes every beat's text but not `scene_007.mp3`, so `narrate` reports "cached"
+    and the video keeps the previous script's voiceover. (Hit for real — a rewritten
+    94-beat script reused 80 mp3s from the old 80-beat one, still naming the old
+    protagonist.) Audio with no stamp predates this check, so treat it as stale.
+    """
+    stamp = _text_stamp_path(out_path)
+    if not stamp.exists():
+        return False
+    try:
+        return stamp.read_text(encoding="utf-8") == text
+    except OSError:
+        return False
+
+
 def generate_tts(text: str, out_path: Path, cfg: dict[str, Any]) -> None:
     """Synthesize `text` to speech at out_path, per config tts.provider."""
     tts = cfg["tts"]
@@ -157,6 +192,7 @@ def generate_tts(text: str, out_path: Path, cfg: dict[str, Any]) -> None:
             out_path,
             max_words=int(tts.get("subtitle_max_words", _SUB_MAX_WORDS)),
             max_chars=int(tts.get("subtitle_max_chars", _SUB_MAX_CHARS)),
+            rate=str(tts.get("rate", "") or ""),
         )
     else:
         raise RuntimeError(f"unknown tts provider '{provider}' (use 'edge')")
@@ -188,10 +224,11 @@ def narrate(*, force: bool = False, cfg: dict[str, Any] | None = None) -> Path:
         if not text.strip():
             print(f"[narrate] scene {s['id']:>2}: skipped (no narration text)")
             continue
-        if out.exists() and not force:
+        if out.exists() and not force and _audio_matches(out, text):
             cached += 1
         else:
             generate_tts(text, out, cfg)
+            _stamp_audio_text(out, text)
             made += 1
             print(f"[narrate] scene {s['id']:>2}: narrated")
         if s.get("audio_path") != rel:

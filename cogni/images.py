@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import base64
 import json
+import re
 import textwrap
 from pathlib import Path
 from typing import Any
@@ -56,20 +57,59 @@ def _mock_image(prompt: str, out_path: Path, size: tuple[int, int], label: str) 
     img.save(out_path, "PNG")
 
 
-def _openrouter_image(prompt: str, out_path: Path, cfg: dict[str, Any]) -> None:
-    """Generate one image via OpenRouter's /images endpoint and write it to disk."""
+def _openrouter_image(prompt: str, out_path: Path, cfg: dict[str, Any],
+                      ref: Path | None = None) -> None:
+    """Generate one image via OpenRouter and write it to disk.
+
+    Without `ref` this uses the plain /images endpoint. With `ref` (a character
+    reference still) it goes through /chat/completions with the reference attached as
+    an image part, which is how the Gemini image models keep a recurring character
+    ON-MODEL. Text alone does not: an unanchored description let book #4 render its
+    protagonist as a different person mid-video. The reference costs ~1.3k prompt
+    tokens (~$0.0003) — negligible next to the ~$0.034 image itself.
+    """
     key = require_env("OPENROUTER_API_KEY")
     img = cfg["image"]
     base = cfg["llm"]["base_url"].rstrip("/")  # https://openrouter.ai/api/v1
-    body: dict[str, Any] = {"model": img["model"], "prompt": prompt}
+    headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+    timeout = float(img.get("timeout_sec", 180))
+
+    if ref is not None and ref.exists():
+        b64 = base64.b64encode(ref.read_bytes()).decode()
+        guided = (
+            "The attached reference image defines the RECURRING CHARACTER. Whenever a "
+            "person appears in the scene below, it is that exact same character: same "
+            "face, skin tone, hair, build and signature clothing. Do not restyle them, "
+            "do not age them, do not change their ethnicity. Compose a NEW scene:\n"
+            f"{prompt}"
+        )
+        body: dict[str, Any] = {
+            "model": img["model"],
+            "messages": [{"role": "user", "content": [
+                {"type": "text", "text": guided},
+                {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64}"}},
+            ]}],
+            "modalities": ["image", "text"],
+        }
+        try:
+            r = httpx.post(f"{base}/chat/completions", headers=headers, json=body, timeout=timeout)
+        except httpx.HTTPError as e:
+            raise RuntimeError(f"OpenRouter image request failed: {e}") from e
+        if r.status_code != 200:
+            raise RuntimeError(f"OpenRouter image gen HTTP {r.status_code}: {r.text[:300]}")
+        msg = ((r.json().get("choices") or [{}])[0].get("message") or {})
+        images = msg.get("images") or []
+        url = (images[0].get("image_url", {}) or {}).get("url", "") if images else ""
+        if not url.startswith("data:"):
+            raise RuntimeError(f"OpenRouter returned no image for a referenced scene: {r.text[:300]}")
+        out_path.write_bytes(base64.b64decode(url.split(",", 1)[1]))
+        return
+
+    body = {"model": img["model"], "prompt": prompt}
     if img.get("aspect_ratio"):
         body["aspect_ratio"] = img["aspect_ratio"]
     try:
-        r = httpx.post(
-            f"{base}/images",
-            headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
-            json=body, timeout=float(img.get("timeout_sec", 180)),
-        )
+        r = httpx.post(f"{base}/images", headers=headers, json=body, timeout=timeout)
     except httpx.HTTPError as e:
         raise RuntimeError(f"OpenRouter image request failed: {e}") from e
     if r.status_code != 200:
@@ -80,17 +120,129 @@ def _openrouter_image(prompt: str, out_path: Path, cfg: dict[str, Any]) -> None:
     out_path.write_bytes(base64.b64decode(data[0]["b64_json"]))
 
 
-def generate_image(prompt: str, out_path: Path, cfg: dict[str, Any], label: str = "") -> None:
-    """Generate one image for `prompt` at out_path, per config image.provider."""
+def _comfy_image(prompt: str, out_path: Path, cfg: dict[str, Any]) -> None:
+    """Generate one image via the local ComfyUI server (SDXL + faceted-low-poly LoRA).
+
+    Free + local. Generates at the model's native res, then Lanczos-upscales to the
+    video canvas (flat low-poly facets upscale cleanly). The style LoRA's trigger word
+    is prepended; the STYLE token is already in `prompt`. Seed is derived from the scene
+    filename so re-runs reproduce.
+    """
+    import hashlib
+    import sys
+
+    c = cfg["image"].get("comfy", {})
+    scripts_dir = str(Path(__file__).resolve().parent.parent / "scripts")
+    if scripts_dir not in sys.path:
+        sys.path.insert(0, scripts_dir)
+    from comfy_gen import generate  # local ComfyUI client
+
+    trigger = c.get("trigger", "ral-polygon")
+    full = prompt if trigger.lower() in prompt.lower() else f"{trigger}, {prompt}"
+    seed = int(hashlib.sha1(out_path.stem.encode()).hexdigest()[:8], 16)
+    gen_w, gen_h = int(c.get("gen_width", 1344)), int(c.get("gen_height", 768))
+
+    tmp = out_path.with_name(out_path.stem + ".gen.png")
+    generate(
+        full, tmp, seed=seed, w=gen_w, h=gen_h,
+        ckpt=c.get("ckpt", "dreamshaperXL_turbo.safetensors"),
+        steps=int(c.get("steps", 7)), cfg=float(c.get("cfg", 2.0)),
+        lora=c.get("lora", "polygon-style-sdxl.safetensors"),
+        lora_str=float(c.get("lora_strength", 0.9)),
+        timeout_s=int(c.get("timeout_sec", 300)),
+    )
+    # Upscale to the delivery size (default 2560x1440 = zoom headroom for Ken Burns,
+    # matching the channel's other images). Lanczos keeps flat low-poly facets crisp.
+    ow, oh = int(c.get("out_width", 2560)), int(c.get("out_height", 1440))
+    with Image.open(tmp) as im:
+        im.convert("RGB").resize((ow, oh), Image.LANCZOS).save(out_path, "PNG")
+    tmp.unlink(missing_ok=True)
+
+
+def generate_image(prompt: str, out_path: Path, cfg: dict[str, Any], label: str = "",
+                   ref: Path | None = None) -> None:
+    """Generate one image for `prompt` at out_path, per config image.provider.
+
+    `ref` is an optional recurring-character reference still (openrouter only).
+    """
     provider = cfg["image"]["provider"]
     if provider == "mock":
         _mock_image(prompt, out_path, _canvas_size(cfg), label or out_path.stem)
     elif provider == "openrouter":
-        _openrouter_image(prompt, out_path, cfg)
+        _openrouter_image(prompt, out_path, cfg, ref=ref)
+    elif provider == "comfy":
+        _comfy_image(prompt, out_path, cfg)
     else:
         raise RuntimeError(
-            f"unknown image provider '{provider}' (use 'openrouter' or 'mock')"
+            f"unknown image provider '{provider}' (use 'comfy', 'openrouter', or 'mock')"
         )
+
+
+# Does this shot contain a person? Only those need the character reference — sending a
+# face reference into a pure object/landscape shot just biases it toward inserting one.
+_PERSON_RE = re.compile(
+    r"\b(he|him|his|she|her|they|man|woman|guy|person|people|crowd|figure|face|hand|hands|"
+    r"shoulder|silhouette|protagonist|kid|child|boy|girl)\b", re.I)
+
+
+def _shot_has_person(prompt: str, character: dict[str, Any] | None) -> bool:
+    name = ((character or {}).get("name") or "").strip()
+    first = name.split()[0] if name else ""
+    if first and re.search(rf"\b{re.escape(first)}\b", prompt, re.I):
+        return True
+    return bool(_PERSON_RE.search(prompt))
+
+
+def _is_figure_beat(narration: str, prompt: str, character: dict[str, Any] | None) -> bool:
+    """Is THIS beat actually about the recurring figure — or just any beat with a person?
+
+    In the new format the recurring figure is a REAL person (usually the author), not an
+    invented protagonist who appears in every scene. So "does the shot contain a person?"
+    is the wrong test: it forced the author into every crowd, kitchen, and street. The
+    author's face only belongs where the beat is genuinely about THEM — their name (or
+    surname) in the narration or the prompt. Everyone else is an anonymous body.
+    """
+    name = ((character or {}).get("name") or "").strip()
+    if not name:
+        return False
+    surname = name.split()[-1]
+    hay = f"{narration} {prompt}".lower()
+    return bool(re.search(rf"\b{re.escape(surname.lower())}\b", hay))
+
+
+def _ensure_character_ref(cfg: dict[str, Any], character: dict[str, Any] | None,
+                          images_dir: Path, style: str) -> Path | None:
+    """One canonical portrait of the recurring character, generated once and reused.
+
+    This is the anchor that keeps the protagonist on-model across a whole book. Cached:
+    delete `_character_ref.png` to re-roll the character's look.
+    """
+    desc = ((character or {}).get("description") or "").strip()
+    if not desc or cfg["image"]["provider"] != "openrouter":
+        return None
+    ref = images_dir / "_character_ref.png"
+    if ref.exists():
+        return ref
+    name = ((character or {}).get("name") or "the protagonist").strip()
+    prompt = (
+        f"Character reference sheet: a single clear head-and-shoulders portrait of {name}, "
+        f"facing the camera, neutral expression, even lighting, plain uncluttered background. "
+        f"{desc} {style}"
+    ).strip()
+    print(f"[images] building character reference for {name} -> {ref.name}")
+    _openrouter_image(prompt, ref, cfg)          # no ref yet — this IS the reference
+    return ref
+
+
+def _image_prompt(base: str, character: dict[str, Any] | None, style: str) -> str:
+    """Beat prompt + optional recurring-character clause + STYLE token."""
+    parts = [base.strip()]
+    desc = ((character or {}).get("description") or "").strip()
+    if desc:
+        parts.append(f"Recurring character, only if a person appears in this shot: {desc}.")
+    if style.strip():
+        parts.append(style.strip())
+    return " ".join(p for p in parts if p).strip()
 
 
 def images(
@@ -112,6 +264,7 @@ def images(
     scenes = doc.get("scenes", [])
     if not scenes:
         raise RuntimeError(f"{scenes_path} has no scenes.")
+    character = doc.get("character")
 
     if not skip_review:
         unreviewed, failing = review_gate(scenes)
@@ -133,10 +286,19 @@ def images(
     root_parent = project_root(cfg)  # project root, for relative paths
 
     provider = cfg["image"]["provider"]
-    made = cached = 0
+    char_ref = _ensure_character_ref(cfg, character, images_dir, style)
+    made = cached = referenced = 0
     changed = False
+    # A provider can refuse ONE prompt (Gemini IMAGE_SAFETY blocked a camp-imagery beat
+    # near the end of an 81-scene book). Aborting there threw away the whole pass, so we
+    # isolate per scene and still fail loudly at the end — the scenes that DID render stay
+    # on disk, so a re-run retries only the refusals instead of re-billing the book.
+    failures: list[tuple[int, str]] = []
     for s in scenes:
-        # Start keyframe — every scene gets one.
+        # One still per scene. NB: we deliberately do NOT generate an end keyframe for
+        # animate scenes — the cogni-animate skill drives motion from the single start
+        # still plus a camera-move prompt (two near-identical keyframes froze the clips),
+        # so end stills were pure waste.
         start_out = images_dir / f"scene_{s['id']:03d}.png"
         if start_out.exists() and not force:
             cached += 1
@@ -146,37 +308,38 @@ def images(
                 raise RuntimeError(
                     f"scene {s['id']} has no image prompt — run `script` (and `visuals`)."
                 )
-            generate_image(f"{base} {style}".strip(), start_out, cfg, label=f"Scene {s['id']}")
+            # Only append the recurring-figure clause + reference when the beat is about
+            # the figure (their name in narration/prompt). On every other person-beat the
+            # figure is irrelevant — a nameless body — so we pass character=None there.
+            figure = _is_figure_beat(s.get("narration", ""), base, character)
+            full = _image_prompt(base, character if figure else None, style)
+            ref = char_ref if (char_ref and figure) else None
+            try:
+                generate_image(full, start_out, cfg, label=f"Scene {s['id']}", ref=ref)
+            except RuntimeError as e:
+                print(f"[images] scene {s['id']} FAILED: {e}")
+                failures.append((s["id"], str(e)))
+                continue
             made += 1
+            referenced += 1 if ref else 0
         start_rel = str(start_out.relative_to(root_parent))
         if s.get("image_path") != start_rel:
             s["image_path"] = start_rel
             changed = True
-
-        # End keyframe — only for scenes flagged animate=true (the second frame of
-        # the start->end hero clip). Non-animate scenes stay single stills.
-        if s.get("animate") and (s.get("end_image_prompt") or "").strip():
-            end_out = images_dir / f"scene_{s['id']:03d}_end.png"
-            if end_out.exists() and not force:
-                cached += 1
-            else:
-                generate_image(
-                    f"{s['end_image_prompt'].strip()} {style}".strip(),
-                    end_out, cfg, label=f"Scene {s['id']} (end)",
-                )
-                made += 1
-            end_rel = str(end_out.relative_to(root_parent))
-            if s.get("end_image_path") != end_rel:
-                s["end_image_path"] = end_rel
-                changed = True
-        elif s.get("end_image_path") is not None:
-            # No longer animating (or no end prompt) — drop the stale end reference.
-            s["end_image_path"] = None
+        if s.get("end_image_path") is not None:
+            s["end_image_path"] = None      # drop stale references to retired end stills
             changed = True
 
     if changed:
         scenes_path.write_text(
             json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
         )
-    print(f"[images] provider={provider} — {made} generated, {cached} cached ({len(scenes)} scenes) -> {images_dir}")
+    print(f"[images] provider={provider} — {made} generated ({referenced} character-locked), "
+          f"{cached} cached ({len(scenes)} scenes) -> {images_dir}")
+    if failures:
+        detail = "\n".join(f"  scene {sid}: {err}" for sid, err in failures)
+        raise RuntimeError(
+            f"{len(failures)} scene(s) have no image (the rest are saved; re-running "
+            f"retries only these):\n{detail}"
+        )
     return images_dir

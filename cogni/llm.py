@@ -29,8 +29,11 @@ _APP_HEADERS = {
     "HTTP-Referer": "https://github.com/jxnhoongz/project_cogni",
     "X-Title": "Project Cogni",
 }
-# Generous ceiling for a single `claude -p` call (Opus long-form can take a while).
-_CLAUDE_TIMEOUT_SEC = 300
+# Ceiling for a single `claude -p` call. Long-form stages send a whole book's worth of
+# scenes in ONE call — `visuals` on an 81-scene book blew straight through 300s and
+# aborted the run. Provider timeouts are NOT retried (only bad JSON is), so this ceiling
+# has to be generous enough for the biggest single pass rather than typical.
+_CLAUDE_TIMEOUT_SEC = 1200
 
 
 def _claude_env() -> dict[str, str] | None:
@@ -103,19 +106,39 @@ def call_llm(
     Raises RuntimeError on provider errors, empty output, or (json) bad JSON.
     """
     cfg = cfg or load_config()
-    if provider == "claude":
-        content = _call_claude(model, prompt, system)
-    elif provider == "openrouter":
-        content = _call_openrouter(cfg, model, prompt, system, json_out, max_tokens)
-    else:
+    if provider not in ("claude", "openrouter"):
         raise RuntimeError(
             f"unknown LLM provider '{provider}' (use 'claude' or 'openrouter')"
         )
 
-    content = (content or "").strip()
-    if not content:
-        raise RuntimeError(f"LLM call to {provider}:{model} returned empty content")
-    return _parse_json(content, model) if json_out else content
+    def _once() -> str:
+        if provider == "claude":
+            return _call_claude(model, prompt, system)
+        return _call_openrouter(cfg, model, prompt, system, json_out, max_tokens)
+
+    # LLMs occasionally emit malformed JSON (a stray trailing comma) or empty output.
+    # For JSON stages, resample a couple of times before giving up — each attempt is a
+    # fresh completion, so a one-off glitch on a single long call no longer aborts a
+    # whole multi-call run (e.g. one bad act killing a 6-act script).
+    attempts = 3 if json_out else 1
+    last_err: Exception = RuntimeError("no LLM attempt was made")
+    for n in range(1, attempts + 1):
+        content = (_once() or "").strip()
+        if not content:
+            last_err = RuntimeError(f"LLM call to {provider}:{model} returned empty content")
+        elif not json_out:
+            return content
+        else:
+            try:
+                return _parse_json(content, model)
+            except RuntimeError as e:
+                last_err = e  # bad JSON — resample and try again
+        # Say so: each claude attempt can take up to _CLAUDE_TIMEOUT_SEC, so a silent
+        # retry looks like a hang (and hides *why* a run is slow).
+        if n < attempts:
+            print(f"[llm] {provider}:{model} gave unusable output ({last_err}); "
+                  f"resampling ({n + 1}/{attempts}) ...")
+    raise last_err
 
 
 def _call_claude(model: str, prompt: str, system: str | None) -> str:
@@ -210,6 +233,14 @@ def _call_openrouter(
 
 
 _FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)```", re.DOTALL)
+_TRAILING_COMMA_RE = re.compile(r",(\s*[}\]])")
+_CTRL_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")  # control chars except \t \n \r
+
+
+def _repair_json(text: str) -> str:
+    """Best-effort fixes for quirks LLMs emit: a trailing comma before } or ], and
+    stray control characters. Cheap first line of defence before we resample."""
+    return _CTRL_RE.sub("", _TRAILING_COMMA_RE.sub(r"\1", text))
 
 
 def _parse_json(content: str, model: str) -> dict[str, Any]:
@@ -225,10 +256,13 @@ def _parse_json(content: str, model: str) -> dict[str, Any]:
             text = text[start : end + 1]
     try:
         data = json.loads(text)
-    except json.JSONDecodeError as e:
-        raise RuntimeError(
-            f"LLM '{model}' did not return valid JSON: {e}\n--- got ---\n{content[:500]}"
-        ) from e
+    except json.JSONDecodeError:
+        try:
+            data = json.loads(_repair_json(text))  # trailing comma / stray control char
+        except json.JSONDecodeError as e:
+            raise RuntimeError(
+                f"LLM '{model}' did not return valid JSON: {e}\n--- got ---\n{content[:500]}"
+            ) from e
     if not isinstance(data, dict):
         raise RuntimeError(f"LLM '{model}' returned JSON but not an object: {type(data)}")
     return data

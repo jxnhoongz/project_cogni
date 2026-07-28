@@ -17,7 +17,8 @@ llm:
       model: "claude-haiku-4-5"
     script:
       provider: "claude"                      # English verdict narration (POV, not summary)
-      model: "claude-sonnet-5"                # fast + strong; use claude-opus-4-8 for a slower "polish" pass
+      model: "claude-opus-4-8"                # opus: the script IS the product — worth the slower pass
+                                              # (was sonnet-5 for books 1-3; prose felt templated)
     visuals:
       provider: "claude"                      # creative: two keyframe prompts + a motion prompt per scene
       model: "claude-sonnet-5"
@@ -30,6 +31,9 @@ llm:
     fact_review:
       provider: "claude"                      # grounding: check narration claims against book.md (contradicts / not-in-book / opinion)
       model: "claude-opus-4-8"                # opus: careful reading of the book vs the script
+    modes:
+      provider: "claude"                      # judgment: which beats earn motion (LOW/MEDIUM/HIGH) + motion prompts
+      model: "claude-opus-4-8"                # opus: careful spend judgment (motion costs Higgsfield credits)
 
 # --- Ingest (book.md -> outline.json) ----------------------------------------
 ingest:
@@ -41,43 +45,91 @@ ingest:
 script:
   # "short" = one pass, min/max_scenes below (~4-5 min, fast/cheap — good for tests).
   # "long"  = chaptered deep-dive (the `long:` block below), ~30-45 min for production.
-  mode: "short"
+  mode: "long"
   min_scenes: 8              # short mode: scene count range
   max_scenes: 14
   long:                      # long mode: a structure pass, then one call per chapter
-    target_minutes: 37       # aim (~30-45 min); guidance to the model
+    target_minutes: 30       # aim (~30 min); guidance to the model
     min_chapters: 5
     max_chapters: 7
     min_scenes_per_chapter: 10
     max_scenes_per_chapter: 14
   # The narration point of view. This is a VERDICT, not a summary — a stance.
   # Override per book with `--angle "..."`.
+  # NOTE: this text is injected into EVERY chapter call as "POINT OF VIEW (follow this
+  # closely)". Do NOT enumerate a fixed list of verdict moves here — the old wording
+  # ("say what it gets right, where it is overstated, and who it helps") templated every
+  # book's climax and made three videos reuse the same scaffolding. Keep it a stance +
+  # a demand for book-specific concreteness, and let each book's own material decide the
+  # shape of the judgement.
   angle: >-
-    Take a clear, honest point of view — this is a verdict, not a summary. Say
-    what the book genuinely gets right, where it is weak, vague, or overstated,
-    and who it actually helps in real life. Warm, specific, a little skeptical.
-    Written to be heard: natural spoken narration, first person.
+    Reach an honest, book-specific verdict — the one thing that most survives scrutiny and the
+    one that least does, decided by THIS book's own material. Do not import a recurring house
+    opinion (e.g. a standing "it ignores privilege" line); let each book earn its own judgement.
+
+# --- Motion modes (scenes.json -> per-scene mode + video_prompt) -------------
+# Tag each beat LOW (free Ken Burns) / MEDIUM / HIGH; write a motion prompt for the
+# animated ones. Beat 1 (cold open) is always forced HIGH.
+# NOTE (learned on book #1): each animated clip is ~8s but most beats' narration runs
+# ~12-18s, so the clip plays then FREEZES on its last frame for the remainder — reads
+# as a stall. And low-poly stills with Ken Burns already look alive, so motion adds
+# little for a lot of credits (~36 cr/clip). Keep this small: hook + a few punches.
+# Prefer animating SHORT beats (narration <= ~8s) so the clip covers the whole scene.
+modes:
+  max_animated: 0            # 0 = no hero clips. Dropped after book #5: four Seedance
+                             # clips cost 189 credits and mostly read as slow zooms next
+                             # to the Ken Burns stills — not worth it. Credits now go to
+                             # image generation instead. Raise this to bring motion back.
 
 # --- Narration (scenes.json narration -> audio/scene_XXX.mp3) -----------------
 # provider "edge" -> edge-tts (free, no key). Voices e.g. en-GB-RyanNeural,
 # en-US-AndrewNeural, en-US-GuyNeural. (openai/elevenlabs can be added later.)
 tts:
   provider: "edge"
-  voice: "en-GB-RyanNeural"
+  # Same Brian, WITHOUT the multilingual language detector: the Multilingual variant
+  # re-detects language on every TTS call (= every beat), and on low-signal text
+  # (numbers like "$60,000") it randomly flipped ~one beat per video into
+  # French-accented prosody. Plain Brian can't language-flip. A/B samples:
+  # research/voice_test/ (2026-07-23).
+  voice: "en-US-BrianNeural"               # Cognibot — casual, natural
+  # Speaking-rate offset (edge-tts), e.g. "-15%". This is the LENGTH LEVER: slow Brian
+  # down instead of padding the script. Measured 2026-07-20: Brian's default is ~167 wpm
+  # and -20% gives ~133 wpm. Leave empty unless a script comes up short — the 4,041-word
+  # Psychology of Money script already lands ~24 min at the default, so it needs no slowing.
+  rate: ""
   # Subtitles show a few words at a time (chunked from edge-tts word timings),
   # not a whole sentence. Lower these for shorter on-screen phrases.
   subtitle_max_words: 5
   subtitle_max_chars: 42
 
 # --- Image generation --------------------------------------------------------
-# provider "openrouter" -> OpenRouter /images (uses OPENROUTER_API_KEY, ~$0.04/image
-# on gemini-2.5-flash-image, ~$0.50 for a 13-scene video; images cache so re-runs
-# are free). provider "mock" -> free placeholder PNGs for testing.
+# provider "openrouter" -> OpenRouter /images (uses OPENROUTER_API_KEY, ~$0.039/image,
+# ~$3.25 for a 84-image book; images cache so re-runs are free).
+# provider "mock" -> free placeholder PNGs for testing.
+#
+# Model chosen by bake-off (2026-07-20, 3 prompts x 4 models, $0.32): Nano Banana 2 Lite
+# costs the SAME as the old gemini-2.5-flash-image but is clearly better (2.5-flash
+# rendered a smiling face for "tense sweating" and empty backgrounds) and is natively
+# 16:9 (1376x768). Rejected: gpt-5-image-mini — 4x cheaper but OpenAI image models only
+# do 1024x1024/1536x1024/1024x1536, i.e. NO 16:9, so every frame would need a ~16% crop.
+# Nano Banana 2 (~$0.077) and Nano Banana Pro (~$0.155, ~$13/book) aren't worth the jump.
 image:
-  provider: "openrouter"
-  model: "google/gemini-2.5-flash-image"
+  provider: "openrouter"     # Gemini (quality) — local SDXL/comfy was lower quality
+  model: "google/gemini-3.1-flash-lite-image"   # Nano Banana 2 Lite
   aspect_ratio: "16:9"
   timeout_sec: 180
+  comfy:                     # local SDXL: DreamShaper XL Turbo + polygon-style LoRA
+    ckpt: "dreamshaperXL_turbo.safetensors"
+    lora: "polygon-style-sdxl.safetensors"
+    lora_strength: 0.9       # sweet spot: clean faceting without over-cook
+    trigger: "ral-polygon"   # polygon LoRA activation token (prepended to prompt)
+    steps: 7                 # DreamShaper Turbo = few steps
+    cfg: 2.0
+    gen_width: 1344          # SDXL native-ish 16:9; upscaled below
+    gen_height: 768
+    out_width: 2560          # Lanczos-upscaled delivery size (Ken Burns headroom)
+    out_height: 1440
+    timeout_sec: 300
 
 # --- Video assembly ----------------------------------------------------------
 video:
@@ -86,8 +138,24 @@ video:
   fps: 30
   ken_burns_zoom: 1.08       # subtle zoom across a scene's duration
   music_volume: 0.08         # low background music (0.0-1.0)
+  # Background track from `shared.music`. Empty = pick automatically per book (hashed
+  # from the book slug), so videos stop sharing one bed — the old code always took the
+  # alphabetically-first file. Set a filename (e.g. "long_note_two.mp3") to pin one.
+  # Prefer LONGER tracks for these ~22-min cuts: a 3-min track loops ~7x.
+  music: ""                  # per-book auto-pick (hashed from slug); name a file to pin
   fade_sec: 0.5
   subtitles: true            # burn synced subtitles from the narration (edge-tts timings)
+  # Burned-subtitle look (Risograph theme). Colors are #RRGGBB.
+  subtitle:
+    font: "Trebuchet MS"     # any installed font; a cleaner face than the old DejaVu
+    font_size: 15
+    text_color: "F1EDE4"     # cream
+    box_color: "14332E"      # dark teal backing
+    box_alpha: 64            # 0=solid .. 255=invisible; ~75% opaque soft bar
+    border_style: 4          # 4 = soft box hugging the text (not the harsh full-width bar)
+    outline: 0
+    shadow: 0
+    margin_v: 55             # lift off the bottom edge
   burn_captions: false       # the old on_screen_text label bar (off when subtitles on)
   encoder: "nvenc"           # NVIDIA hardware encoder (this machine: RTX 3060). Also:
                              #   "videotoolbox" = Apple Silicon HW, "x264" = software (portable).

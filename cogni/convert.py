@@ -26,6 +26,11 @@ SUPPORTED_SUFFIXES = PLAIN_TEXT_SUFFIXES | MARKITDOWN_SUFFIXES
 
 _WORDLIKE = re.compile(r"[A-Za-z][A-Za-z'’.\-]{1,}")
 
+# A PDF "book" under this many words is a fragment, not a book — typically a scanned
+# PDF whose only text layer is the TOC (Eat That Frog: 106 pages of scans, 1,958
+# extractable words). Clean-but-tiny text must trigger the same rescue as corrupt text.
+_MIN_PDF_WORDS = 5_000
+
 
 def _read_plain_text(path: Path) -> str:
     """Read a text file as UTF-8, falling back to latin-1 rather than crashing."""
@@ -120,11 +125,19 @@ def _extract(src: Path) -> str:
     text = (result.text_content or "").strip()
     is_pdf = src.suffix.lower() == ".pdf"
 
-    if is_pdf and (_looks_corrupt(text) or _looks_doubled(text)):
-        why = "doubled/overlapping text" if _looks_doubled(text) else "font-locked/scanned"
+    def _unusable(t: str) -> bool:
+        return _looks_corrupt(t) or _looks_doubled(t) or len(t.split()) < _MIN_PDF_WORDS
+
+    if is_pdf and _unusable(text):
+        if _looks_doubled(text):
+            why = "doubled/overlapping text"
+        elif _looks_corrupt(text):
+            why = "font-locked/scanned"
+        else:
+            why = f"far too short ({len(text.split())} words — scanned pages?)"
         print(f"[convert] markitdown text looks {why} — retrying with PyMuPDF ...")
         alt = _pdf_text_pymupdf(src)
-        if alt and not _looks_corrupt(alt) and not _looks_doubled(alt):
+        if alt and not _unusable(alt):
             print("[convert] PyMuPDF extracted clean text.")
             text = alt
         else:

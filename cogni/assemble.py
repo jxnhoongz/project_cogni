@@ -27,6 +27,30 @@ from .config import load_config, project_root, resolve_path, resolve_shared
 _MUSIC_EXTS = (".mp3", ".wav", ".m4a", ".aac", ".ogg", ".flac")
 
 
+def _ass_color(hex_rgb: str, alpha: int = 0) -> str:
+    """#RRGGBB -> libass &HAABBGGRR (AA: 00=opaque, FF=transparent)."""
+    h = hex_rgb.lstrip("#")
+    r, g, b = h[0:2], h[2:4], h[4:6]
+    return f"&H{alpha:02X}{b}{g}{r}".upper()
+
+
+def _subtitle_style(cfg: dict[str, Any]) -> str:
+    """libass force_style for burned subtitles, from config (Riso palette defaults)."""
+    sub = cfg.get("video", {}).get("subtitle", {}) or {}
+    font = sub.get("font", "Trebuchet MS")
+    size = int(sub.get("font_size", 16))
+    text = _ass_color(str(sub.get("text_color", "F1EDE4")), 0)          # cream, opaque
+    box = _ass_color(str(sub.get("box_color", "14332E")),
+                     int(sub.get("box_alpha", 120)))                    # dark teal, soft
+    border_style = int(sub.get("border_style", 3))                     # 3 = opaque box
+    outline = int(sub.get("outline", 0))
+    shadow = int(sub.get("shadow", 0))
+    margin_v = int(sub.get("margin_v", 60))
+    return (f"FontName={font},FontSize={size},PrimaryColour={text},"
+            f"BackColour={box},BorderStyle={border_style},Outline={outline},"
+            f"Shadow={shadow},Alignment=2,MarginV={margin_v}")
+
+
 def _venc(cfg: dict[str, Any]) -> list[str]:
     """ffmpeg video-encoder args, chosen by config.yaml video.encoder.
 
@@ -143,9 +167,7 @@ def _scene_clip(
         )
 
     if subs is not None:
-        style = ("FontName=DejaVu Sans,FontSize=15,PrimaryColour=&H00FFFFFF,"
-                 "OutlineColour=&H90000000,BorderStyle=1,Outline=2,Shadow=0,"
-                 "Alignment=2,MarginV=52")
+        style = _subtitle_style(cfg)
         # Escape the path for ffmpeg's subtitles filter: forward slashes and an
         # escaped drive-letter colon, or Windows paths like C:\... get mis-parsed as
         # filter options ("Unable to parse 'original_size' ...").
@@ -182,13 +204,43 @@ def _scene_clip(
 
 
 def _find_music(cfg: dict[str, Any]) -> Path | None:
+    """Pick the background track.
+
+    `video.music` names a file to force it. Otherwise pick DETERMINISTICALLY from the
+    library by the active book's slug: taking the alphabetically-first track (the old
+    behaviour) gave every book the same bed, so the channel sounded identical video to
+    video. Hashing the slug keeps one book on one track across re-assembles while
+    different books land on different tracks.
+    """
+    import hashlib
+
+    from .config import active_project
+
     music_dir = resolve_shared(cfg, "music")
     if not music_dir.exists():
         return None
-    for p in sorted(music_dir.iterdir()):
-        if p.suffix.lower() in _MUSIC_EXTS:
-            return p
-    return None
+    # exclude narration VO living in the same folder (outro_vo.mp3): a `*_vo` file
+    # must never be hashed onto as a background bed
+    tracks = sorted(
+        p for p in music_dir.iterdir()
+        if p.suffix.lower() in _MUSIC_EXTS and not p.stem.endswith("_vo")
+    )
+    if not tracks:
+        return None
+
+    want = str(cfg["video"].get("music") or "").strip()
+    if want:
+        for p in tracks:
+            if p.name == want or p.stem == want:
+                return p
+        raise RuntimeError(
+            f"config video.music = '{want}' but no such track in {music_dir} "
+            f"(have: {', '.join(p.name for p in tracks)})"
+        )
+
+    slug = active_project() or ""
+    idx = int(hashlib.sha1(slug.encode()).hexdigest(), 16) % len(tracks)
+    return tracks[idx]
 
 
 def _concat(clips: list[Path], out: Path, cfg: dict[str, Any]) -> None:
