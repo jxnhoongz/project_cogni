@@ -1,0 +1,31 @@
+{
+  "slug": "tfs-anchoring",
+  "book": "Uploaded/thinking-fast-and-slow",
+  "title": "THINKING FAST AND SLOW",
+  "cover": {
+    "title": "Thinking, Fast and Slow",
+    "author": "Daniel Kahneman"
+  },
+  "music": "bittersweet.mp3",
+  "segments": [
+    {
+      "text": "The first number you hear rewires every number after it, even when that first number is completely random.",
+      "scene": 27,
+      "pos": "62% 46%"
+    },
+    {
+      "text": "Show someone a high number, then ask an unrelated question, and their answer drifts up. A low one, and it drifts down.",
+      "scene": 26,
+      "pos": "60% 46%"
+    },
+    {
+      "text": "It's called anchoring. It's why the first salary named in a negotiation basically sets the entire range.",
+      "scene": 27,
+      "pos": "62% 46%"
+    },
+    {
+      "text": "So name the first number. Full verdict on the channel.",
+      "scene": null
+    }
+  ]
+}

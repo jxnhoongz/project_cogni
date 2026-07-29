@@ -1,0 +1,36 @@
+{
+  "slug": "tfs-two-systems",
+  "book": "Uploaded/thinking-fast-and-slow",
+  "title": "THINKING FAST AND SLOW",
+  "cover": {
+    "title": "Thinking, Fast and Slow",
+    "author": "Daniel Kahneman"
+  },
+  "music": "almost_new.mp3",
+  "segments": [
+    {
+      "text": "You think you're the one making your decisions. Meet the other guy in your head who actually makes most of them.",
+      "scene": 16,
+      "pos": "58% 46%"
+    },
+    {
+      "text": "System one is fast, automatic, emotional. It runs the show, and it's usually right enough to be dangerous.",
+      "scene": 21,
+      "pos": "55% 46%"
+    },
+    {
+      "text": "System two is slow, deliberate, does the math, and it's lazy. It mostly rubber-stamps whatever system one already decided.",
+      "scene": 25,
+      "pos": "55% 46%"
+    },
+    {
+      "text": "Knowing they exist won't stop your snap judgments. But it tells you exactly when to slow down and switch which one is driving.",
+      "scene": 16,
+      "pos": "58% 46%"
+    },
+    {
+      "text": "The best idea in the book. Honest verdict on the channel.",
+      "scene": null
+    }
+  ]
+}

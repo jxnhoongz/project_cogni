@@ -1,0 +1,36 @@
+{
+  "slug": "tfs-loss-aversion",
+  "book": "Uploaded/thinking-fast-and-slow",
+  "title": "THINKING FAST AND SLOW",
+  "cover": {
+    "title": "Thinking, Fast and Slow",
+    "author": "Daniel Kahneman"
+  },
+  "music": "deliberate_thought.mp3",
+  "segments": [
+    {
+      "text": "You own two stocks. One's up, one's down. Watch which one you sell, because it's the exact wrong one.",
+      "scene": 54,
+      "pos": "42% 48%"
+    },
+    {
+      "text": "You sell the winner to lock in the gain. And you hold the loser, waiting for it to come back.",
+      "scene": 53,
+      "pos": "50% 46%"
+    },
+    {
+      "text": "Why? A loss hurts about twice as much as the same gain feels good. So you'll do almost anything to avoid feeling it.",
+      "scene": 56,
+      "pos": "50% 46%"
+    },
+    {
+      "text": "But the math says the opposite. This one habit quietly wrecks more portfolios than any bad tip.",
+      "scene": 54,
+      "pos": "42% 48%"
+    },
+    {
+      "text": "That's loss aversion. Honest verdict on the channel.",
+      "scene": null
+    }
+  ]
+}

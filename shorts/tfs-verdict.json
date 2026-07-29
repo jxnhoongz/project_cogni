@@ -1,0 +1,36 @@
+{
+  "slug": "tfs-verdict",
+  "book": "Uploaded/thinking-fast-and-slow",
+  "title": "THINKING FAST AND SLOW",
+  "cover": {
+    "title": "Thinking, Fast and Slow",
+    "author": "Daniel Kahneman"
+  },
+  "music": "dreams_become_real.mp3",
+  "segments": [
+    {
+      "text": "Here's my honest problem with this book. It brilliantly diagnoses every glitch in your thinking.",
+      "scene": 70,
+      "pos": "50% 50%"
+    },
+    {
+      "text": "It shows you the anchoring, the loss aversion, the biases running your decisions. The diagnosis is world-class.",
+      "scene": 37,
+      "pos": "60% 46%"
+    },
+    {
+      "text": "But the prescription is thin. Knowing about a bias barely helps. You walk right into it anyway, even after the chapter.",
+      "scene": 49,
+      "pos": "55% 46%"
+    },
+    {
+      "text": "The real fix isn't awareness, it's rules. A checklist, a formula, a system that decides when your gut can't be trusted.",
+      "scene": 70,
+      "pos": "50% 50%"
+    },
+    {
+      "text": "Great book. Read it for the diagnosis. Full verdict on the channel.",
+      "scene": null
+    }
+  ]
+}

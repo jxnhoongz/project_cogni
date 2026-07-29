@@ -1,0 +1,36 @@
+{
+  "slug": "tfs-framing",
+  "book": "Uploaded/thinking-fast-and-slow",
+  "title": "THINKING FAST AND SLOW",
+  "cover": {
+    "title": "Thinking, Fast and Slow",
+    "author": "Daniel Kahneman"
+  },
+  "music": "backbay_lounge.mp3",
+  "segments": [
+    {
+      "text": "Ninety percent survive. Ten percent die. Same exact fact, and you'll choose differently depending on which one you hear.",
+      "scene": 59,
+      "pos": "50% 46%"
+    },
+    {
+      "text": "It's called framing. The words wrapped around a number change the decision, even when the odds are identical.",
+      "scene": 58,
+      "pos": "50% 46%"
+    },
+    {
+      "text": "It's why ninety-five percent fat free sells, and five percent fat doesn't. Same yogurt. Different feeling.",
+      "scene": 62,
+      "pos": "55% 46%"
+    },
+    {
+      "text": "Once you see it, you can't unsee it. In ads, on menus, in every deal you're offered.",
+      "scene": 59,
+      "pos": "50% 46%"
+    },
+    {
+      "text": "Watch how they frame it. Honest verdict on the channel.",
+      "scene": null
+    }
+  ]
+}

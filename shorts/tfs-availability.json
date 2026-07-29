@@ -1,0 +1,36 @@
+{
+  "slug": "tfs-availability",
+  "book": "Uploaded/thinking-fast-and-slow",
+  "title": "THINKING FAST AND SLOW",
+  "cover": {
+    "title": "Thinking, Fast and Slow",
+    "author": "Daniel Kahneman"
+  },
+  "music": "floating_cities.mp3",
+  "segments": [
+    {
+      "text": "You watch one terrifying news story, and suddenly you're pricing security cameras at midnight.",
+      "scene": 40,
+      "pos": "50% 44%"
+    },
+    {
+      "text": "That's the availability heuristic. You judge how likely something is by how easily a scary example comes to mind.",
+      "scene": 42,
+      "pos": "55% 46%"
+    },
+    {
+      "text": "Meanwhile, the smoke detector in your hallway has been dead for a month.",
+      "scene": 45,
+      "pos": "50% 48%"
+    },
+    {
+      "text": "House fires kill far more people than break-ins. But fires are boring and the burglary was on the news. So you fear the wrong one.",
+      "scene": 46,
+      "pos": "50% 46%"
+    },
+    {
+      "text": "Fear the odds, not the images. Full verdict on the channel.",
+      "scene": null
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "slug": "tfs-regression",
+  "book": "Uploaded/thinking-fast-and-slow",
+  "title": "THINKING FAST AND SLOW",
+  "cover": {
+    "title": "Thinking, Fast and Slow",
+    "author": "Daniel Kahneman"
+  },
+  "music": "at_rest.mp3",
+  "segments": [
+    {
+      "text": "Someone has a terrible month. You sit them down and get tough. Next month, they bounce back. Proof tough love works, right?",
+      "scene": 64,
+      "pos": "48% 46%"
+    },
+    {
+      "text": "Then someone has a great month. You praise them. Next month, they slip. So praise makes people worse?",
+      "scene": 65,
+      "pos": "50% 46%"
+    },
+    {
+      "text": "No. Neither one did anything. Extreme results drift back toward average on their own. It's called regression to the mean.",
+      "scene": 66,
+      "pos": "55% 46%"
+    },
+    {
+      "text": "You just took credit for something that was going to happen anyway. Be careful what lesson you learn from it.",
+      "scene": 68,
+      "pos": "50% 46%"
+    },
+    {
+      "text": "Your brain is built to miss this one. Full verdict on the channel.",
+      "scene": null
+    }
+  ]
+}

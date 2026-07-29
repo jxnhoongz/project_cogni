@@ -1,0 +1,36 @@
+{
+  "slug": "tfs-bat-ball",
+  "book": "Uploaded/thinking-fast-and-slow",
+  "title": "THINKING FAST AND SLOW",
+  "cover": {
+    "title": "Thinking, Fast and Slow",
+    "author": "Daniel Kahneman"
+  },
+  "music": "thinking_music.mp3",
+  "segments": [
+    {
+      "text": "Quick one. A bat and a ball cost one dollar ten. The bat costs a dollar more than the ball. How much is the ball?",
+      "scene": 15,
+      "pos": "55% 46%"
+    },
+    {
+      "text": "You just thought ten cents. Almost everyone does. And it's wrong.",
+      "scene": 20,
+      "pos": "58% 46%"
+    },
+    {
+      "text": "It's five cents. Your fast brain grabbed the easy answer and never passed it to the slow brain that checks the math.",
+      "scene": 15,
+      "pos": "55% 46%"
+    },
+    {
+      "text": "That hand-off failing is the whole book. You're not dumb. You're just on autopilot more than you think.",
+      "scene": 20,
+      "pos": "58% 46%"
+    },
+    {
+      "text": "That's Thinking, Fast and Slow. Honest verdict on the channel.",
+      "scene": null
+    }
+  ]
+}
