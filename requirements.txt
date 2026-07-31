@@ -32,3 +32,6 @@ openai-whisper>=20231117
 
 # Utilities
 requests>=2.31.0
+google-api-python-client
+google-auth-oauthlib
+google-auth-httplib2
