@@ -1,0 +1,36 @@
+{
+  "slug": "pom-savings",
+  "book": "Uploaded/the-psychology-of-money",
+  "title": "THE PSYCHOLOGY OF MONEY",
+  "cover": {
+    "title": "The Psychology of Money",
+    "author": "Morgan Housel"
+  },
+  "music": "deliberate_thought.mp3",
+  "segments": [
+    {
+      "text": "Here's the most useful money fact nobody wants to hear. Your savings rate matters more than your income, or your investment returns.",
+      "scene": 23,
+      "pos": "66% 46%"
+    },
+    {
+      "text": "You can't control the market. You can't always control your salary. But the gap between what you earn and what you spend? That's yours.",
+      "scene": 20,
+      "pos": "64% 46%"
+    },
+    {
+      "text": "And you don't even need a reason to save. Save for flexibility, for options, for the surprise you can't see coming.",
+      "scene": 23,
+      "pos": "66% 46%"
+    },
+    {
+      "text": "A high savings rate quietly beats a big salary that all gets spent. Boring. Unbeatable.",
+      "scene": 20,
+      "pos": "64% 46%"
+    },
+    {
+      "text": "That's The Psychology of Money. Honest verdict on the channel.",
+      "scene": null
+    }
+  ]
+}

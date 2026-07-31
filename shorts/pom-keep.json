@@ -1,0 +1,36 @@
+{
+  "slug": "pom-keep",
+  "book": "Uploaded/the-psychology-of-money",
+  "title": "THE PSYCHOLOGY OF MONEY",
+  "cover": {
+    "title": "The Psychology of Money",
+    "author": "Morgan Housel"
+  },
+  "music": "bittersweet.mp3",
+  "segments": [
+    {
+      "text": "Getting money and keeping money are two completely different skills. Most people only ever learn the first one.",
+      "scene": 61,
+      "pos": "50% 46%"
+    },
+    {
+      "text": "Getting rich takes optimism and risk. Staying rich takes the opposite. Fear, humility, a little paranoia.",
+      "scene": 61,
+      "pos": "50% 46%"
+    },
+    {
+      "text": "The list of people who got rich and then lost it all is long. Great at getting. Terrible at keeping.",
+      "scene": 62,
+      "pos": "50% 46%"
+    },
+    {
+      "text": "Survival is the whole game. You can't win the long one if you get forced out of it.",
+      "scene": 61,
+      "pos": "50% 46%"
+    },
+    {
+      "text": "Getting it and keeping it aren't the same. Honest verdict on the channel.",
+      "scene": null
+    }
+  ]
+}

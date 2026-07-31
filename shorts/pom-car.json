@@ -1,0 +1,36 @@
+{
+  "slug": "pom-car",
+  "book": "Uploaded/the-psychology-of-money",
+  "title": "THE PSYCHOLOGY OF MONEY",
+  "cover": {
+    "title": "The Psychology of Money",
+    "author": "Morgan Housel"
+  },
+  "music": "backbay_lounge.mp3",
+  "segments": [
+    {
+      "text": "You buy the expensive car so people will think you're impressive. Here's the sad little secret.",
+      "scene": 30,
+      "pos": "50% 46%"
+    },
+    {
+      "text": "Nobody's looking at you. They see the car, and they picture themselves in it. You're not even in the frame.",
+      "scene": 30,
+      "pos": "50% 46%"
+    },
+    {
+      "text": "It's the man-in-the-car paradox. The stuff you buy to earn respect almost never earns it.",
+      "scene": 33,
+      "pos": "55% 46%"
+    },
+    {
+      "text": "The people you're trying to impress are too busy wanting that same respect for themselves.",
+      "scene": 30,
+      "pos": "50% 46%"
+    },
+    {
+      "text": "Buy it for you, not for them. Full verdict on the channel.",
+      "scene": null
+    }
+  ]
+}

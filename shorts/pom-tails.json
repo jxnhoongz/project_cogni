@@ -1,0 +1,36 @@
+{
+  "slug": "pom-tails",
+  "book": "Uploaded/the-psychology-of-money",
+  "title": "THE PSYCHOLOGY OF MONEY",
+  "cover": {
+    "title": "The Psychology of Money",
+    "author": "Morgan Housel"
+  },
+  "music": "floating_cities.mp3",
+  "segments": [
+    {
+      "text": "Most of what matters in your life comes from a tiny handful of moments. It's called tails driving everything.",
+      "scene": 45,
+      "pos": "55% 50%"
+    },
+    {
+      "text": "A rare few events drive the huge majority of results. In investing, in business, in your own choices.",
+      "scene": 44,
+      "pos": "55% 46%"
+    },
+    {
+      "text": "Most startups die. A rare few pay for all the losers combined. Most of your best days won't feel special when they happen.",
+      "scene": 46,
+      "pos": "55% 46%"
+    },
+    {
+      "text": "So you can be wrong half the time and still win, as long as the few times you're right, you're really right.",
+      "scene": 45,
+      "pos": "55% 50%"
+    },
+    {
+      "text": "A few things carry everything. Full verdict on the channel.",
+      "scene": null
+    }
+  ]
+}
