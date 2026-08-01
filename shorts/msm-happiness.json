@@ -1,0 +1,34 @@
+{
+  "slug": "msm-happiness",
+  "book": "Uploaded/mans-search-for-meaning-v2",
+  "title": "MAN'S SEARCH FOR MEANING",
+  "cover": { "title": "Man's Search for Meaning", "author": "Viktor E. Frankl" },
+  "cover_file": "projects/Uploaded/mans-search-for-meaning-v2/cover.jpg",
+  "music": "dreams_become_real.mp3",
+  "segments": [
+    {
+      "text": "Stop chasing happiness. Chasing it is the exact reason you can't catch it.",
+      "scene": 46,
+      "pos": "50% 42%"
+    },
+    {
+      "text": "Frankl said happiness can't be pursued. It can only ensue. A side effect of losing yourself in something bigger than you.",
+      "scene": 49,
+      "pos": "50% 50%"
+    },
+    {
+      "text": "Aim straight at it and it flees, like a butterfly you're snatching at. Aim past yourself, at work, a person, a cause, and it lands on you sideways.",
+      "scene": 48,
+      "pos": "50% 45%"
+    },
+    {
+      "text": "And this is the one idea in his book that hard data later confirmed. Purpose first. The good feeling follows on its own.",
+      "scene": 78,
+      "pos": "50% 50%"
+    },
+    {
+      "text": "That's Man's Search for Meaning. Honest verdict on the channel.",
+      "scene": null
+    }
+  ]
+}

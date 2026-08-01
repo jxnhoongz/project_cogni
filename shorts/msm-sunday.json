@@ -1,0 +1,34 @@
+{
+  "slug": "msm-sunday",
+  "book": "Uploaded/mans-search-for-meaning-v2",
+  "title": "MAN'S SEARCH FOR MEANING",
+  "cover": { "title": "Man's Search for Meaning", "author": "Viktor E. Frankl" },
+  "cover_file": "projects/Uploaded/mans-search-for-meaning-v2/cover.jpg",
+  "music": "at_rest.mp3",
+  "segments": [
+    {
+      "text": "It's Sunday, a little after four. The laundry's folded, your phone's finally gone quiet. Nothing is wrong. So why the flat gray weight?",
+      "scene": 1,
+      "pos": "50% 45%"
+    },
+    {
+      "text": "A psychiatrist in Vienna gave that feeling a name: the Sunday neurosis. The emptiness that leaks in the moment the busyness stops.",
+      "scene": 6,
+      "pos": "34% 45%"
+    },
+    {
+      "text": "His diagnosis: routines and screens quietly took over your wanting, until you forgot how to want anything for yourself. The existential vacuum.",
+      "scene": 8,
+      "pos": "50% 42%"
+    },
+    {
+      "text": "The empty Sunday isn't a flaw in you. It's the space where a reason of your own is supposed to go.",
+      "scene": 4,
+      "pos": "50% 42%"
+    },
+    {
+      "text": "That's Man's Search for Meaning. Honest verdict on the channel.",
+      "scene": null
+    }
+  ]
+}

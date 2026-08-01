@@ -1,0 +1,34 @@
+{
+  "slug": "msm-doors",
+  "book": "Uploaded/mans-search-for-meaning-v2",
+  "title": "MAN'S SEARCH FOR MEANING",
+  "cover": { "title": "Man's Search for Meaning", "author": "Viktor E. Frankl" },
+  "cover_file": "projects/Uploaded/mans-search-for-meaning-v2/cover.jpg",
+  "music": "gymnopedie_no_1.mp3",
+  "segments": [
+    {
+      "text": "Where does meaning actually come from? Frankl says there are only three doors. Only three.",
+      "scene": 56,
+      "pos": "50% 50%"
+    },
+    {
+      "text": "Door one, a deed. Something you make, finish, or put into the world. He kept his life's work rolled in his coat to have one.",
+      "scene": 57,
+      "pos": "50% 50%"
+    },
+    {
+      "text": "Door two, love. You can be stripped of everything you own and still find a reason to live in a single person.",
+      "scene": 61,
+      "pos": "50% 48%"
+    },
+    {
+      "text": "Door three, your attitude. Change the situation when you can. When you can't, you still choose how you meet it. Pick a door today.",
+      "scene": 62,
+      "pos": "50% 45%"
+    },
+    {
+      "text": "That's Man's Search for Meaning. Honest verdict on the channel.",
+      "scene": null
+    }
+  ]
+}

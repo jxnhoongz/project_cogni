@@ -1,0 +1,34 @@
+{
+  "slug": "msm-freedom",
+  "book": "Uploaded/mans-search-for-meaning-v2",
+  "title": "MAN'S SEARCH FOR MEANING",
+  "cover": { "title": "Man's Search for Meaning", "author": "Viktor E. Frankl" },
+  "cover_file": "projects/Uploaded/mans-search-for-meaning-v2/cover.jpg",
+  "music": "healing.mp3",
+  "segments": [
+    {
+      "text": "They took his home, his family, his name, even the clothes off his back. And Frankl found the one thing the guards could never reach.",
+      "scene": 18,
+      "pos": "50% 55%"
+    },
+    {
+      "text": "Between what happens to you and what you do next, there's a gap. And in that gap sits a freedom no one can confiscate.",
+      "scene": 21,
+      "pos": "50% 52%"
+    },
+    {
+      "text": "He watched starving men give away their last crust of bread. Even there, how you respond stayed a choice.",
+      "scene": 22,
+      "pos": "50% 50%"
+    },
+    {
+      "text": "You'll never face a camp. But the rule holds on any hard day: lose almost everything, and you still choose your attitude toward it.",
+      "scene": 23,
+      "pos": "50% 40%"
+    },
+    {
+      "text": "That's Man's Search for Meaning. Honest verdict on the channel.",
+      "scene": null
+    }
+  ]
+}

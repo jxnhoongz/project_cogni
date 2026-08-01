@@ -1,0 +1,34 @@
+{
+  "slug": "msm-paradox",
+  "book": "Uploaded/mans-search-for-meaning-v2",
+  "title": "MAN'S SEARCH FOR MEANING",
+  "cover": { "title": "Man's Search for Meaning", "author": "Viktor E. Frankl" },
+  "cover_file": "projects/Uploaded/mans-search-for-meaning-v2/cover.jpg",
+  "music": "almost_new.mp3",
+  "segments": [
+    {
+      "text": "Terrified of sweating in a meeting? The second you think 'don't sweat,' the faucet opens. The fear makes the symptom.",
+      "scene": 64,
+      "pos": "50% 42%"
+    },
+    {
+      "text": "Frankl's fix is almost insultingly simple: walk in and try to sweat as hard as you possibly can.",
+      "scene": 65,
+      "pos": "50% 42%"
+    },
+    {
+      "text": "The loop needs your resistance to survive. Chase the symptom on purpose, and it starves, often within a week.",
+      "scene": 66,
+      "pos": "50% 45%"
+    },
+    {
+      "text": "Same with insomnia: try to stay awake, and sleep sneaks up. He called it paradoxical intention, the one trick of his modern therapy kept.",
+      "scene": 3,
+      "pos": "50% 55%"
+    },
+    {
+      "text": "That's Man's Search for Meaning. Honest verdict on the channel.",
+      "scene": null
+    }
+  ]
+}

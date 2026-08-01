@@ -1,0 +1,34 @@
+{
+  "slug": "msm-lifeasks",
+  "book": "Uploaded/mans-search-for-meaning-v2",
+  "title": "MAN'S SEARCH FOR MEANING",
+  "cover": { "title": "Man's Search for Meaning", "author": "Viktor E. Frankl" },
+  "cover_file": "projects/Uploaded/mans-search-for-meaning-v2/cover.jpg",
+  "music": "floating_cities.mp3",
+  "segments": [
+    {
+      "text": "You keep asking what life is supposed to mean. Frankl says you've got it backwards. Life is the one asking you.",
+      "scene": 45,
+      "pos": "50% 50%"
+    },
+    {
+      "text": "Every situation is a question put to you. And your answer isn't words. It's what you actually do next.",
+      "scene": 44,
+      "pos": "50% 42%"
+    },
+    {
+      "text": "Stop demanding that life explain itself to you. Start treating today as an assignment only you can answer.",
+      "scene": 53,
+      "pos": "50% 45%"
+    },
+    {
+      "text": "It's a small flip with big weight: not what do I want from life, but what is life asking of me, right now?",
+      "scene": 45,
+      "pos": "50% 50%"
+    },
+    {
+      "text": "That's Man's Search for Meaning. Honest verdict on the channel.",
+      "scene": null
+    }
+  ]
+}
