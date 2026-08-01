@@ -12,7 +12,8 @@ Spec (shorts/<slug>.json):
     cover: {title, author}   # fetched legally; OR cover_file: "<path>"
     music: "<file in assets/audio>",
     segments: [ {text: "<narration line>", scene: <img id or null>, pos?: "x% y%"}, ... ] }
-The LAST segment with scene:null becomes the COGNIBOT + Subscribe end card.
+The LAST segment with scene:null becomes a SILENT COGNIBOT sign-off (no VO — the short
+ends on the last teaching line; direction B). Any `text` on that segment is ignored.
 
 Usage:  python scripts/shortify.py shorts/<slug>.json [--no-render]
 """
@@ -28,6 +29,7 @@ REPO = Path(__file__).resolve().parent.parent
 PUBLIC = REPO / "remotion" / "public"
 VOICE = "en-US-BrianNeural"
 FPS = 30
+END_CARD_SEC = 2.6   # silent COGNIBOT sign-off (direction B — no spoken outro)
 STOP = {"THE", "A", "TO", "OF", "AND", "IS", "YOU", "IT'S", "SO", "BE", "IN", "FOR", "DON'T",
         "WHO", "NOT", "AN", "YOUR", "YOU'RE", "THIS", "THAT'S", "OUT", "ONE", "EVERY", "ON"}
 
@@ -72,25 +74,26 @@ def build(spec_path: Path, do_render: bool) -> None:
 
     segs = []
     for i, s in enumerate(spec["segments"], 1):
+        if s.get("scene") is None:
+            # Direction B: a SILENT quiet end card — no VO, no karaoke sell. The short's last
+            # heard line is the final teaching beat; a gentle COGNIBOT card fades in over music.
+            segs.append({"dur": END_CARD_SEC, "img": None, "audio": None, "lines": []})
+            print(f"[shortify] seg {i}: {END_CARD_SEC}s END CARD (silent)")
+            continue
         mp3 = PUBLIC / f"{slug}_seg_{i}.mp3"
         subprocess.run([sys.executable, "-m", "edge_tts", "--voice", VOICE,
                         "--text", s["text"], "--write-media", str(mp3)], check=True, capture_output=True)
         wsegs, _ = whisper.transcribe(str(mp3), word_timestamps=True, language="en")
         words = [{"w": w.word.strip().upper(), "t": round(w.start, 2)} for ws in wsegs for w in (ws.words or [])]
-        seg = {"dur": _dur(mp3), "audio": mp3.name, "lines": _lines(words)}
-        if s.get("scene") is not None:
-            src = imgs / f"scene_{int(s['scene']):03d}.png"
-            if not src.exists():
-                raise SystemExit(f"segment {i} references missing still {src}")
-            dst = PUBLIC / f"{slug}_s{int(s['scene']):03d}.png"
-            dst.write_bytes(src.read_bytes())
-            seg["img"] = dst.name
-            seg["pos"] = s.get("pos", "50% 46%")
-        else:
-            seg["img"] = None
+        src = imgs / f"scene_{int(s['scene']):03d}.png"
+        if not src.exists():
+            raise SystemExit(f"segment {i} references missing still {src}")
+        dst = PUBLIC / f"{slug}_s{int(s['scene']):03d}.png"
+        dst.write_bytes(src.read_bytes())
+        seg = {"dur": _dur(mp3), "audio": mp3.name, "lines": _lines(words),
+               "img": dst.name, "pos": s.get("pos", "50% 46%")}
         segs.append(seg)
-        print(f"[shortify] seg {i}: {seg['dur']}s, {len(seg['lines'])} lines"
-              + (f", still {seg['img']}" if seg["img"] else ", END CARD"))
+        print(f"[shortify] seg {i}: {seg['dur']}s, {len(seg['lines'])} lines, still {seg['img']}")
 
     # cover: fetch legally, or copy a provided file
     cov = PUBLIC / f"{slug}_cover.jpg"

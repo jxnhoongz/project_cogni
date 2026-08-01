@@ -11,7 +11,8 @@ import { CREAM, TEAL, OCHRE, fontFamily, Grain, Misreg } from "./theme";
 export type Word = { t: number; w: string };
 export type Line = { k: number; ws: Word[] };            // k = index of the keyword (ochre)
 // img/audio are full staticFile names (scripts/shortify.py stages them); img null = end card.
-export type Seg = { dur: number; img: string | null; audio: string; pos?: string; lines: Line[] };
+// audio null = no VO for that segment (the end card is silent — see EndSeg / direction B).
+export type Seg = { dur: number; img: string | null; audio: string | null; pos?: string; lines: Line[] };
 
 const FPS = 30;
 const clamp = { extrapolateLeft: "clamp" as const, extrapolateRight: "clamp" as const };
@@ -63,7 +64,7 @@ const Badge: React.FC<{ cover: string; title: string }> = ({ cover, title }) => 
   }}>
     <Img src={staticFile(cover)} style={{ height: 132, width: "auto", borderRadius: 6, display: "block", boxShadow: "0 6px 18px rgba(0,0,0,0.5)" }} />
     <div>
-      <div style={{ fontFamily, color: OCHRE, fontSize: 22, letterSpacing: 5, textTransform: "uppercase" }}>An honest verdict</div>
+      <div style={{ fontFamily, color: OCHRE, fontSize: 22, letterSpacing: 4, textTransform: "uppercase" }}>Cognibot · Book notes</div>
       <div style={{ fontFamily, color: CREAM, fontSize: 46, lineHeight: 1.0, textTransform: "uppercase", marginTop: 4 }}>{title}</div>
     </div>
   </div>
@@ -85,15 +86,21 @@ const PhotoSeg: React.FC<{ img: string; pos: string; lines: Line[]; frames: numb
   );
 };
 
-const EndSeg: React.FC<{ lines: Line[] }> = ({ lines }) => (
-  <AbsoluteFill style={{ backgroundColor: TEAL, justifyContent: "center", alignItems: "center" }}>
-    <div style={{ position: "absolute", top: "26%", display: "flex", justifyContent: "center", width: "100%" }}>
-      <Misreg size={96} color={CREAM}>COGNIBOT</Misreg>
-    </div>
-    <KaraokeCaption lines={lines} />
-    <div style={{ position: "absolute", bottom: "30%", backgroundColor: OCHRE, color: TEAL, fontFamily, fontSize: 40, letterSpacing: 3, padding: "18px 46px", textTransform: "uppercase" }}>▶ Subscribe</div>
-  </AbsoluteFill>
-);
+// Direction B: a QUIET sign-off. No spoken outro (the short's last heard line is the final
+// teaching beat), no karaoke sell, no loud gold button — just a gentle COGNIBOT wordmark that
+// fades up over the music bed, with an understated subscribe cue. The spell doesn't break.
+const EndSeg: React.FC = () => {
+  const f = useCurrentFrame();
+  const op = interpolate(f, [4, 18], [0, 1], easeOut);
+  return (
+    <AbsoluteFill style={{ backgroundColor: TEAL, justifyContent: "center", alignItems: "center" }}>
+      <div style={{ opacity: op, textAlign: "center" }}>
+        <Misreg size={84} color={CREAM}>COGNIBOT</Misreg>
+        <div style={{ fontFamily, color: CREAM, opacity: 0.5, fontSize: 30, letterSpacing: 6, textTransform: "uppercase", marginTop: 30 }}>▶ subscribe</div>
+      </div>
+    </AbsoluteFill>
+  );
+};
 
 export const Short2: React.FC<{ segs: Seg[]; cover: string; title: string; music?: string }> = ({ segs, cover, title, music }) => {
   let off = 0;
@@ -104,8 +111,8 @@ export const Short2: React.FC<{ segs: Seg[]; cover: string; title: string; music
         const len = Math.round(s.dur * FPS); const from = off; off += len;
         return (
           <Sequence key={i} from={from} durationInFrames={len}>
-            <Audio src={staticFile(s.audio)} />
-            {s.img ? <PhotoSeg img={s.img} pos={s.pos ?? "50% 46%"} lines={s.lines} frames={len} /> : <EndSeg lines={s.lines} />}
+            {s.audio && <Audio src={staticFile(s.audio)} />}
+            {s.img ? <PhotoSeg img={s.img} pos={s.pos ?? "50% 46%"} lines={s.lines} frames={len} /> : <EndSeg />}
           </Sequence>
         );
       })}
