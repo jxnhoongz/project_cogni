@@ -34,7 +34,8 @@ REPO = Path(__file__).resolve().parent.parent
 CRED = REPO / "credentials"
 CLIENT = CRED / "youtube_client.json"
 TOKEN = CRED / "youtube.token.json"
-SCOPES = ["https://www.googleapis.com/auth/youtube.upload"]
+SCOPES = ["https://www.googleapis.com/auth/youtube.upload",
+          "https://www.googleapis.com/auth/youtube.readonly"]   # readonly = list/inspect own videos
 
 
 def get_creds(force_consent: bool = False):
