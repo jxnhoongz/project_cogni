@@ -107,6 +107,8 @@ def build(spec_path: Path, do_render: bool) -> None:
     (PUBLIC / f"{slug}_music.mp3").write_bytes((REPO / "assets" / "audio" / spec["music"]).read_bytes())
 
     props = {"segs": segs, "cover": cov.name, "title": spec["title"], "music": f"{slug}_music.mp3"}
+    if spec.get("cta"):
+        props["cta"] = spec["cta"]   # micro-CTA overlay on the last beat (no dead end card)
     spec_out = PUBLIC / f"{slug}.short.json"
     spec_out.write_text(json.dumps(props, ensure_ascii=False, indent=1), encoding="utf-8")
     total = round(sum(s["dur"] for s in segs), 1)

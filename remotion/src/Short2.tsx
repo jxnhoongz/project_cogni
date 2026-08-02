@@ -102,8 +102,24 @@ const EndSeg: React.FC = () => {
   );
 };
 
-export const Short2: React.FC<{ segs: Seg[]; cover: string; title: string; music?: string }> = ({ segs, cover, title, music }) => {
+// Optional micro-CTA that rides the LAST ~2.6s of the short (over the final teaching beat),
+// instead of cutting to a value-dead brand card. Keeps content on screen; the CTA is a whisper.
+const CtaTag: React.FC<{ text: string; total: number }> = ({ text, total }) => {
+  const f = useCurrentFrame();
+  const start = total - 78;
+  const op = interpolate(f, [start, start + 12], [0, 1], easeOut);
+  if (f < start) return null;
+  return (
+    <div style={{ position: "absolute", top: "63%", width: "100%", display: "flex", justifyContent: "center", opacity: op }}>
+      <span style={{ fontFamily, color: CREAM, fontSize: 34, letterSpacing: 2, textTransform: "uppercase",
+        background: "rgba(10,25,22,0.6)", padding: "13px 28px", borderRadius: 12, textShadow: "0 4px 14px rgba(0,0,0,0.6)" }}>▶ {text}</span>
+    </div>
+  );
+};
+
+export const Short2: React.FC<{ segs: Seg[]; cover: string; title: string; music?: string; cta?: string }> = ({ segs, cover, title, music, cta }) => {
   let off = 0;
+  const total = segs.reduce((a, s) => a + Math.round(s.dur * FPS), 0);
   return (
     <AbsoluteFill style={{ backgroundColor: TEAL }}>
       {music && <Audio src={staticFile(music)} volume={0.09} loop />}
@@ -116,6 +132,7 @@ export const Short2: React.FC<{ segs: Seg[]; cover: string; title: string; music
           </Sequence>
         );
       })}
+      {cta && <CtaTag text={cta} total={total} />}
       <Badge cover={cover} title={title} />   {/* persistent, above everything */}
       <Grain />
     </AbsoluteFill>
