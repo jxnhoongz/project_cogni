@@ -1,0 +1,29 @@
+{
+  "slug": "frk-daycare",
+  "book": "Uploaded/freakonomics",
+  "title": "FREAKONOMICS",
+  "cover": {
+    "title": "Freakonomics",
+    "author": "Steven D. Levitt & Stephen J. Dubner"
+  },
+  "cover_file": "projects/Uploaded/freakonomics/cover.jpg",
+  "music": "lobby_time.mp3",
+  "cta": "full verdict on the channel",
+  "segments": [
+    {
+      "text": "A daycare was fed up with parents picking their kids up late, so they started charging a small fine. Late pickups didn't fall. They doubled.",
+      "scene": 1,
+      "pos": "50% 45%"
+    },
+    {
+      "text": "Before the fine, being late meant guilt. You'd stranded a tired teacher. The fine swapped that guilt for a price, and a cheap one. Parents just bought the right to be late.",
+      "scene": 2,
+      "pos": "50% 50%"
+    },
+    {
+      "text": "That's the trap. An incentive doesn't only add a cost. It can quietly rewrite what the whole thing means.",
+      "scene": 1,
+      "pos": "50% 45%"
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "slug": "frk-klan",
+  "book": "Uploaded/freakonomics",
+  "title": "FREAKONOMICS",
+  "cover": {
+    "title": "Freakonomics",
+    "author": "Steven D. Levitt & Stephen J. Dubner"
+  },
+  "cover_file": "projects/Uploaded/freakonomics/cover.jpg",
+  "music": "dreams_become_real.mp3",
+  "cta": "full verdict on the channel",
+  "segments": [
+    {
+      "text": "For decades, the Ku Klux Klan's power wasn't rope or fire. It was secrecy. You feared what you couldn't see.",
+      "scene": 36,
+      "pos": "50% 45%"
+    },
+    {
+      "text": "So how do you beat a group whose whole power is a secret? You make the secret worthless.",
+      "scene": 35,
+      "pos": "50% 45%"
+    },
+    {
+      "text": "In 1946, activists fed the Klan's secret passwords to the Superman radio show. Millions of kids heard them on primetime.",
+      "scene": 38,
+      "pos": "50% 50%"
+    },
+    {
+      "text": "By morning, kids were shouting those secret passwords in backyards like a game. The terror became a joke. Sunlight is a weapon.",
+      "scene": 39,
+      "pos": "50% 50%"
+    }
+  ]
+}

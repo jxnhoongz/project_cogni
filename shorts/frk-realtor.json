@@ -1,0 +1,34 @@
+{
+  "slug": "frk-realtor",
+  "book": "Uploaded/freakonomics",
+  "title": "FREAKONOMICS",
+  "cover": {
+    "title": "Freakonomics",
+    "author": "Steven D. Levitt & Stephen J. Dubner"
+  },
+  "cover_file": "projects/Uploaded/freakonomics/cover.jpg",
+  "music": "thinking_music.mp3",
+  "cta": "full verdict on the channel",
+  "segments": [
+    {
+      "text": "Your real estate agent swears she'll fight for every last dollar on your house. Then she sells her own house, same neighborhood, for more.",
+      "scene": 3,
+      "pos": "50% 50%"
+    },
+    {
+      "text": "If she squeezes an extra ten thousand out of YOUR sale, her cut is about a hundred and fifty bucks. Not worth her weekend.",
+      "scene": 31,
+      "pos": "50% 50%"
+    },
+    {
+      "text": "On her own house, that ten thousand is all hers. So she waits for the better offer. Same agent, opposite effort.",
+      "scene": 32,
+      "pos": "50% 50%"
+    },
+    {
+      "text": "She didn't lie. She just knows how the game is really scored, and that gap is where your money leaks. Ask what your expert is paid to do.",
+      "scene": 33,
+      "pos": "50% 45%"
+    }
+  ]
+}
