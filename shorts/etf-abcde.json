@@ -1,0 +1,31 @@
+{
+  "slug": "etf-abcde",
+  "book": "Uploaded/eat-that-frog",
+  "title": "EAT THAT FROG",
+  "cover": { "title": "Eat That Frog!", "author": "Brian Tracy" },
+  "cover_file": "projects/Uploaded/eat-that-frog/cover.jpg",
+  "music": "at_rest.mp3",
+  "cta": "full verdict on the channel",
+  "segments": [
+    {
+      "text": "Your to-do list is lying to you. It puts a tax deadline and 'water the plants' in the same font, like they weigh the same.",
+      "scene": 34,
+      "pos": "50% 50%"
+    },
+    {
+      "text": "So before you start, put a letter on each task. A: serious consequences if you skip it. E: you could delete it and nothing happens.",
+      "scene": 35,
+      "pos": "50% 50%"
+    },
+    {
+      "text": "Then the iron rule: never do a B while an A is still sitting there. No easy task before an important one.",
+      "scene": 36,
+      "pos": "50% 50%"
+    },
+    {
+      "text": "Your A-1, the task with the biggest consequences, that's your frog. Start there, every single day.",
+      "scene": 37,
+      "pos": "50% 45%"
+    }
+  ]
+}

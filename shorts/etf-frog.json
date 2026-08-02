@@ -1,0 +1,31 @@
+{
+  "slug": "etf-frog",
+  "book": "Uploaded/eat-that-frog",
+  "title": "EAT THAT FROG",
+  "cover": { "title": "Eat That Frog!", "author": "Brian Tracy" },
+  "cover_file": "projects/Uploaded/eat-that-frog/cover.jpg",
+  "music": "wholesome.mp3",
+  "cta": "full verdict on the channel",
+  "segments": [
+    {
+      "text": "There's one task on your list you keep dodging. The big, ugly, important one. Brian Tracy has a name for it: your frog.",
+      "scene": 6,
+      "pos": "50% 45%"
+    },
+    {
+      "text": "It's the email still marked unread after six days. You'll clear everything else and still carry that one home in your bag.",
+      "scene": 1,
+      "pos": "50% 50%"
+    },
+    {
+      "text": "And it doesn't wait politely. The frog gets heavier every hour you leave it sitting there.",
+      "scene": 5,
+      "pos": "50% 45%"
+    },
+    {
+      "text": "So here's the rule: eat that frog first. Do the ugliest, most important task before anything else. Win the morning, win the day.",
+      "scene": 6,
+      "pos": "50% 45%"
+    }
+  ]
+}

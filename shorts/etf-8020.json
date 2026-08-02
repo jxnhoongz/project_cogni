@@ -1,0 +1,31 @@
+{
+  "slug": "etf-8020",
+  "book": "Uploaded/eat-that-frog",
+  "title": "EAT THAT FROG",
+  "cover": { "title": "Eat That Frog!", "author": "Brian Tracy" },
+  "cover_file": "projects/Uploaded/eat-that-frog/cover.jpg",
+  "music": "lobby_time.mp3",
+  "cta": "full verdict on the channel",
+  "segments": [
+    {
+      "text": "Look at your to-do list today. Ten tasks. Now the uncomfortable truth: two of them are worth more than the other eight combined.",
+      "scene": 29,
+      "pos": "50% 50%"
+    },
+    {
+      "text": "But the eight are easy, so that's what you do. Eight quick wins, eight lines crossed off, that little hit of done.",
+      "scene": 33,
+      "pos": "50% 50%"
+    },
+    {
+      "text": "Meanwhile the two that actually matter just sit there. Same hours in your day, wildly different payoff.",
+      "scene": 32,
+      "pos": "50% 50%"
+    },
+    {
+      "text": "That's the 80/20 rule. Before you touch the easy eight, ask: which two, done well, actually move my life? Do those first.",
+      "scene": 29,
+      "pos": "50% 50%"
+    }
+  ]
+}

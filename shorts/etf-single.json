@@ -1,0 +1,31 @@
+{
+  "slug": "etf-single",
+  "book": "Uploaded/eat-that-frog",
+  "title": "EAT THAT FROG",
+  "cover": { "title": "Eat That Frog!", "author": "Brian Tracy" },
+  "cover_file": "projects/Uploaded/eat-that-frog/cover.jpg",
+  "music": "long_note_two.mp3",
+  "cta": "full verdict on the channel",
+  "segments": [
+    {
+      "text": "Every time you check your phone 'real quick' in the middle of hard work, part of your attention stays stuck on it. It's called attention residue.",
+      "scene": 91,
+      "pos": "50% 45%"
+    },
+    {
+      "text": "It's why the report that should take an hour eats your whole day. You never gave it one clean, unbroken block.",
+      "scene": 2,
+      "pos": "50% 50%"
+    },
+    {
+      "text": "So do your single hardest task alone. Not tucked between emails, not 'while' anything. Phone in another room.",
+      "scene": 92,
+      "pos": "50% 50%"
+    },
+    {
+      "text": "One task, start to finish, no switching. It's the least glamorous productivity tip, and the one that actually works.",
+      "scene": 91,
+      "pos": "50% 45%"
+    }
+  ]
+}

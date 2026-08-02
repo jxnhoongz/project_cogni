@@ -1,0 +1,31 @@
+{
+  "slug": "etf-21day",
+  "book": "Uploaded/eat-that-frog",
+  "title": "EAT THAT FROG",
+  "cover": { "title": "Eat That Frog!", "author": "Brian Tracy" },
+  "cover_file": "projects/Uploaded/eat-that-frog/cover.jpg",
+  "music": "windswept.mp3",
+  "cta": "full verdict on the channel",
+  "segments": [
+    {
+      "text": "You've been told it takes 21 days to build a habit. That number is a myth, and it might be why your habits keep failing.",
+      "scene": 77,
+      "pos": "40% 50%"
+    },
+    {
+      "text": "It came from a 1960s plastic surgeon's offhand guess. Not a study. When a real lab finally measured it, the average was sixty-six days.",
+      "scene": 88,
+      "pos": "24% 50%"
+    },
+    {
+      "text": "Some habits took up to two hundred and fifty. So if you quit on day 22 because it didn't feel automatic, you barely started.",
+      "scene": 41,
+      "pos": "50% 45%"
+    },
+    {
+      "text": "Habits take longer than the pep talk promised. Expect two months, not three weeks, and you'll actually make it.",
+      "scene": 77,
+      "pos": "40% 50%"
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "slug": "etf-slice",
+  "book": "Uploaded/eat-that-frog",
+  "title": "EAT THAT FROG",
+  "cover": { "title": "Eat That Frog!", "author": "Brian Tracy" },
+  "cover_file": "projects/Uploaded/eat-that-frog/cover.jpg",
+  "music": "carefree.mp3",
+  "cta": "full verdict on the channel",
+  "segments": [
+    {
+      "text": "The report is forty pages. You've written zero. And just picturing all forty makes you so tired you check your phone instead.",
+      "scene": 50,
+      "pos": "50% 45%"
+    },
+    {
+      "text": "Tracy's fix: don't eat the whole sausage. Cut one thin slice. Write the first paragraph. Just that.",
+      "scene": 51,
+      "pos": "50% 50%"
+    },
+    {
+      "text": "Or punch one hole in it. Set a timer for ten minutes and do any part. That's the entire commitment.",
+      "scene": 52,
+      "pos": "50% 50%"
+    },
+    {
+      "text": "Aim only for the next marker, never the whole road. Start small enough that starting feels easy, and momentum does the rest.",
+      "scene": 53,
+      "pos": "50% 50%"
+    }
+  ]
+}
